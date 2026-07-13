@@ -76,6 +76,9 @@
         .btn-danger:hover { background: #e0435f; }
         .btn-safe { background: var(--success); }
         .btn-safe:hover { background: #27ae60; }
+        
+        /* 테이블 조작용 작은 버튼 크기 정의 */
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
 
         /* 3. 우측 메인 콘텐츠 레이아웃 */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -207,7 +210,7 @@
                         <div style="flex: 1;">
                             <table class="custom-table">
                                 <thead>
-                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th></tr>
+                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>관리 및 통제</th></tr>
                                 </thead>
                                 <tbody id="account-table-body"></tbody>
                             </table>
@@ -268,7 +271,6 @@
                 document.getElementById('session-username').innerText = currentUserSession.id;
                 document.getElementById('session-role').innerText = currentUserSession.role;
                 
-                // 프록시 API를 통해 아바타 호출
                 document.getElementById('my-avatar').src = `/api/avatar/${currentUserSession.rbxId}`;
 
                 if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자") {
@@ -318,18 +320,52 @@
             }
         }
 
+        // 🌟 [함수 추가] 계정 삭제 처리 함수
+        async function deleteAccount(targetId) {
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) {
+                return alert("계정을 삭제할 권한이 없습니다.");
+            }
+            if (targetId === "lsrhjru") {
+                return alert("마스터 최고 관리자 계정은 삭제할 수 없습니다.");
+            }
+            if (!confirm(`정말로 관제원 [${targetId}] 계정을 완전히 삭제하시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/accounts/${targetId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert("계정이 삭제되었습니다.");
+                    await fetchAccounts(); // 리스트 즉시 새로고침
+                }
+            } catch(e) {
+                console.error("계정 삭제 실패:", e);
+            }
+        }
+
         function renderAccounts() {
             const tbody = document.getElementById('account-table-body');
             tbody.innerHTML = "";
             accountDB.forEach(u => {
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
                 const tr = document.createElement('tr');
+                
+                // 마스터 마스터 계정이 아니면 우측에 삭제 단추 표시
+                const actionButtonHtml = isSuperAdmin 
+                    ? `<span style="font-size:12px; color:var(--text-muted);">삭제 불가</span>`
+                    : `<button class="btn btn-danger btn-sm" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash-can"></i> 삭제</button>`;
+
                 tr.innerHTML = `
                     <td><img src="/api/avatar/${u.rbxId}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
-                    <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
+                    <td>${actionButtonHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -360,7 +396,7 @@
                 const res = await fetch('/api/current-data');
                 const data = await res.json();
                 
-                const trains = data.trains || data; // 객체 자체이거나 내부 trains 분리 대응
+                const trains = data.trains || data; 
                 const logs = data.logs || [];
                 
                 renderLogs(logs);
@@ -506,7 +542,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId, speedLimit: inputVal, adminId: currentUserSession.id })
             });
-            await updateDashboard(); // 조작 완료 후 즉시 새로고침 (체감 속도 증가)
+            await updateDashboard(); 
         }
 
         async function triggerEmergency(trainId) {
@@ -515,7 +551,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId, adminId: currentUserSession.id })
             });
-            await updateDashboard(); // 조작 완료 후 즉시 새로고침
+            await updateDashboard(); 
         }
 
         async function resetEmergency(trainId) {
@@ -524,10 +560,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId, adminId: currentUserSession.id })
             });
-            await updateDashboard(); // 조작 완료 후 즉시 새로고침
+            await updateDashboard(); 
         }
 
-        // 실시간 연동 주기를 1초에서 0.5초로 줄임
         setInterval(updateDashboard, 500);
 
     </script>
