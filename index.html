@@ -207,7 +207,7 @@
                         <div style="flex: 1;">
                             <table class="custom-table">
                                 <thead>
-                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th><th>관리</th></tr>
+                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th></tr>
                                 </thead>
                                 <tbody id="account-table-body"></tbody>
                             </table>
@@ -276,7 +276,6 @@
                 } else {
                     document.getElementById('menu-accounts').style.display = 'flex';
                 }
-                renderAccounts(); // 로그인 후 권한 렌더링 갱신
             } else {
                 alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
             }
@@ -319,51 +318,18 @@
             }
         }
 
-        // 🔥 계정 삭제 프론트엔드 함수 (추가된 부분)
-        async function deleteAccount(userId) {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) {
-                return alert("계정을 삭제할 권한이 없습니다.");
-            }
-
-            if (!confirm(`정말로 [${userId}] 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
-
-            try {
-                const res = await fetch(`/api/accounts/${userId}`, {
-                    method: 'DELETE'
-                });
-                const data = await res.json();
-
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    alert(`계정 [${userId}]이 성공적으로 삭제되었습니다.`);
-                    await fetchAccounts(); // 목록 새로고침
-                }
-            } catch (e) {
-                console.error("계정 삭제 중 오류 발생", e);
-            }
-        }
-
         function renderAccounts() {
             const tbody = document.getElementById('account-table-body');
             tbody.innerHTML = "";
             accountDB.forEach(u => {
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
                 const tr = document.createElement('tr');
-                
-                // 🔥 삭제 버튼 생성 로직 (최고 관리자 본인 계정은 삭제 불가)
-                let actionHtml = `<td>-</td>`;
-                if (u.id !== "lsrhjru") {
-                    actionHtml = `<td><button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px; display: inline-flex;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash"></i> 삭제</button></td>`;
-                }
-
                 tr.innerHTML = `
                     <td><img src="/api/avatar/${u.rbxId}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
-                    ${actionHtml}
                 `;
                 tbody.appendChild(tr);
             });
