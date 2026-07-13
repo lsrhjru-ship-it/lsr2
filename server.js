@@ -104,7 +104,7 @@ app.post('/api/train-status', (req, res) => {
     }
 
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
-    const currentSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 80;
+    const currentSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 30;
 
     trains[TrainId] = {
         ...req.body,
