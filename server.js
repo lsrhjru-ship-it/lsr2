@@ -95,24 +95,28 @@ app.get('/api/avatar/:rbxId', async (req, res) => {
     res.redirect('https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg');
 });
 
-// [API] 열차 상태 수신
+// server.js 의 [API] 열차 상태 수신 부분을 아래로 교체하세요
 app.post('/api/train-status', (req, res) => {
-    const { TrainId } = req.body;
+    const { TrainId, CurrentSpeed, PositionX, PositionZ, TrainName, CurrentNotch, CurrentReverser, DriverName, DriverId, IsEmergency } = req.body;
 
-    if (!TrainId) {
-        return res.status(400).json({ error: "TrainId가 누락되었습니다." });
-    }
+    if (!TrainId) return res.status(400).json({ error: "TrainId 없음" });
 
-    const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
-    const currentSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 30;
+    // 1. 기존 데이터 확인
+    const oldData = trains[TrainId];
+    
+    // 2. 서버에 이미 변경된 제한속도가 있다면 그 값을 유지, 없다면 로블록스에서 보낸 값을 사용
+    const newSpeedLimit = (oldData && oldData.SpeedLimit) ? oldData.SpeedLimit : (req.body.SpeedLimit || 80);
+    const newEmergency = (oldData && oldData.remoteEmergencyActive !== undefined) ? oldData.remoteEmergencyActive : false;
 
+    // 3. 데이터 업데이트
     trains[TrainId] = {
-        ...req.body,
-        SpeedLimit: req.body.SpeedLimit || currentSpeedLimit,
-        remoteEmergencyActive: previousEmergency,
+        TrainId, CurrentSpeed, PositionX, PositionZ, TrainName, CurrentNotch, CurrentReverser, DriverName, DriverId, IsEmergency,
+        SpeedLimit: newSpeedLimit,
+        remoteEmergencyActive: newEmergency,
         lastSeen: Date.now()
     };
 
+    // 4. 응답으로 유지된 값을 다시 보내줌 (로블록스 기차 스크립트가 이걸 읽어서 적용함)
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit
@@ -136,25 +140,7 @@ app.get('/api/current-data', (req, res) => {
     res.json(activeTrains); 
 });
 
-app.post('/api/train-status', (req, res) => {
-    const { TrainId } = req.body;
-    
-    // 기존 속도 제한을 유지 (없으면 기본값 80)
-    const existingLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 80;
-    const existingEms = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
 
-    trains[TrainId] = {
-        ...req.body,
-        SpeedLimit: existingLimit, // 덮어쓰지 않고 기존값 유지
-        remoteEmergencyActive: existingEms,
-        lastSeen: Date.now()
-    };
-
-    res.json({
-        RemoteEmergency: trains[TrainId].remoteEmergencyActive,
-        SpeedLimit: trains[TrainId].SpeedLimit
-    });
-});
 
 // [API] 원격 비상 정지 명령
 app.post('/api/web-emergency', (req, res) => {
