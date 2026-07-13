@@ -1,17 +1,49 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const app = express();
-const PORT = process.env.PORT || 3000; // Render 배포 환경 맞춤 포트 설정
+const PORT = 3000;
 
 app.use(express.json());
 
 let trains = {};
+const DB_PATH = path.join(__dirname, 'accounts.json');
+
+// 시스템 초기화 시 계정 DB 로드 (파일이 없으면 최고 관리자 기본 생성)
+let accounts = [];
+if (fs.existsSync(DB_PATH)) {
+    accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+} else {
+    accounts = [
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "admin" }
+    ];
+    fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
+}
+
+// 계정 저장 헬퍼 함수
+const saveAccounts = () => fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 로블록스 열차가 상태 정보를 쏘고 명령을 받아가는 곳
+// [API] 전체 계정 목록 조회
+app.get('/api/accounts', (req, res) => {
+    res.json(accounts);
+});
+
+// [API] 신규 관제원 계정 생성
+app.post('/api/accounts', (req, res) => {
+    const { id, pw, rbxId, role } = req.body;
+    if (accounts.some(a => a.id === id)) {
+        return res.status(400).json({ error: "이미 존재하는 ID입니다." });
+    }
+    accounts.push({ id, pw, rbxId, role: role || "일반 관제원" });
+    saveAccounts();
+    res.json({ success: true });
+});
+
+// [API] 열차 상태 수신
 app.post('/api/train-status', (req, res) => {
     const { TrainId } = req.body;
 
@@ -19,46 +51,45 @@ app.post('/api/train-status', (req, res) => {
         return res.status(400).json({ error: "TrainId가 누락되었습니다." });
     }
 
-    // 서버가 기존에 보관하던 고유 제어 변수(원격 정지 상태, 제한속도) 유지
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
-    const currentLimit = trains[TrainId] ? (trains[TrainId].SpeedLimit || 80) : 80;
+    const currentSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 80;
 
     trains[TrainId] = {
         ...req.body,
-        SpeedLimit: currentLimit,
+        SpeedLimit: req.body.SpeedLimit || currentSpeedLimit, // ATC 제한속도 유지
         remoteEmergencyActive: previousEmergency,
         lastSeen: Date.now()
     };
 
-    // 로블록스 스크립트로 전달할 응답 값 구성
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit
     });
 });
 
-// 웹 브라우저가 상시 화면 갱신을 위해 데이터 수신하는 곳
+// [API] 대시보드 데이터 전송
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
     for (const id in trains) {
-        if (now - trains[id].lastSeen > 8000) { // 8초간 통신 해제시 디스폰 처리
+        if (now - trains[id].lastSeen > 30000) { // 30초 이상 신호 없으면 디스폰 처리
             delete trains[id];
         }
     }
     res.json(trains);
 });
 
-// 원격 제한속도 변경 처리 API
+// [API] 제한 속도 변경 명령
 app.post('/api/web-speedlimit', (req, res) => {
     const { trainId, speedLimit } = req.body;
     if (trains[trainId]) {
-        trains[trainId].SpeedLimit = Number(speedLimit);
+        trains[trainId].SpeedLimit = speedLimit;
         res.json({ success: true });
     } else {
         res.status(404).json({ error: "열차를 찾을 수 없습니다." });
     }
 });
 
+// [API] 원격 비상 정지 명령
 app.post('/api/web-emergency', (req, res) => {
     const { trainId } = req.body;
     if (trains[trainId]) {
@@ -69,6 +100,7 @@ app.post('/api/web-emergency', (req, res) => {
     }
 });
 
+// [API] 원격 비상 해제 명령
 app.post('/api/web-reset', (req, res) => {
     const { trainId } = req.body;
     if (trains[trainId]) {
@@ -80,5 +112,5 @@ app.post('/api/web-reset', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[통합 관제탑 서버 실행 완료] Port: ${PORT}`);
+    console.log(`[통합 관제탑 서버 실행 완료] http://localhost:${PORT}`);
 });
