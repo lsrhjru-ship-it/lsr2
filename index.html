@@ -5,22 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로블록스 차세대 통합 관제 시스템</title>
-    <!-- Google Fonts 및 FontAwesome 아이콘 적용 -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         :root {
-            --bg-color: #0b0c16;
-            --panel-bg: rgba(26, 27, 46, 0.7);
-            --panel-border: rgba(79, 172, 254, 0.2);
-            --primary: #4facfe;
+            --bg-color: #05060f; /* 더 깊고 세련된 블랙 */
+            --panel-bg: rgba(18, 20, 36, 0.7);
+            --panel-border: rgba(88, 166, 255, 0.15);
+            --primary: #58a6ff;
             --accent: #00f2fe;
             --danger: #ff4d6d;
             --danger-glow: rgba(255, 77, 109, 0.4);
             --success: #2ecc71;
             --text-main: #f1f2f6;
-            --text-muted: #a0a5c2;
+            --text-muted: #8b949e;
         }
 
         * {
@@ -37,24 +36,24 @@
             height: 100vh;
             overflow: hidden;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(79, 172, 254, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(0, 242, 254, 0.05) 0%, transparent 40%);
+                radial-gradient(circle at 15% 50%, rgba(88, 166, 255, 0.04), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(0, 242, 254, 0.04), transparent 30%);
         }
 
         /* 인증 레이어 (로그인 화면) */
         #auth-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(7, 8, 15, 0.95);
+            background: rgba(5, 6, 15, 0.95);
             z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .auth-card {
-            background: rgba(26, 27, 46, 0.85);
+            background: linear-gradient(180deg, rgba(25, 27, 48, 0.9), rgba(18, 20, 36, 0.9));
             border: 1px solid var(--panel-border);
             padding: 40px;
             border-radius: 16px;
@@ -84,8 +83,8 @@
 
         .form-control {
             width: 100%;
-            background: rgba(11, 12, 22, 0.8);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 12px;
             border-radius: 8px;
             color: white;
@@ -96,13 +95,13 @@
         .form-control:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 10px rgba(79, 172, 254, 0.3);
+            box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
 
         /* 사이드바 */
         .sidebar {
             width: 280px;
-            background: rgba(17, 18, 31, 0.95);
+            background: rgba(13, 17, 23, 0.95);
             border-right: 1px solid var(--panel-border);
             display: flex;
             flex-direction: column;
@@ -115,7 +114,6 @@
             font-size: 20px;
             font-weight: 900;
             color: var(--primary);
-            text-shadow: 0 0 10px rgba(79, 172, 254, 0.4);
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -123,19 +121,21 @@
         }
 
         .user-profile-box {
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             border-radius: 12px;
             padding: 12px;
             display: flex;
             align-items: center;
             gap: 12px;
             margin-bottom: 25px;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .user-profile-box img {
-            width: 44px; height: 44px; border-radius: 50%;
-            background: #151622; border: 2px solid var(--primary);
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: #151622;
+            border: 2px solid var(--primary);
         }
 
         .user-info .u-name { font-weight: bold; font-size: 14px; }
@@ -155,8 +155,8 @@
         }
 
         .menu-item:hover, .menu-item.active {
-            background: rgba(79, 172, 254, 0.15);
-            color: var(--text-main);
+            background: rgba(88, 166, 255, 0.1);
+            color: var(--primary);
             border-left: 4px solid var(--primary);
         }
 
@@ -170,7 +170,7 @@
 
         .top-navbar {
             height: 70px;
-            background: rgba(17, 18, 31, 0.5);
+            background: rgba(13, 17, 23, 0.6);
             border-bottom: 1px solid var(--panel-border);
             display: flex;
             align-items: center;
@@ -179,16 +179,23 @@
             backdrop-filter: blur(10px);
         }
 
-        .top-navbar h1 {
-            font-size: 18px; margin: 0; font-weight: 500; letter-spacing: 0.5px;
-        }
+        .top-navbar h1 { font-size: 18px; margin: 0; font-weight: 500; }
 
         .content-body {
-            flex: 1; padding: 25px; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 25px;
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
         }
 
-        .view-section { display: none; flex-direction: column; gap: 25px; }
+        .view-section {
+            display: none;
+            flex-direction: column;
+            gap: 25px;
+        }
+
         .view-section.active { display: flex; }
 
         /* 관제 맵 레이아웃 */
@@ -197,88 +204,108 @@
             border-radius: 16px;
             border: 1px solid var(--panel-border);
             padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(8px);
         }
 
         .section-title {
-            font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 15px;
-            display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px;
+            font-size: 15px; font-weight: 700; color: #fff;
+            margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
         }
 
         .map-container {
-            width: 100%; height: 420px; background: #07080f;
-            border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
-            position: relative; overflow: hidden;
+            width: 100%; height: 420px;
+            background: #010409;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
         }
 
         .map-container::before {
             content: ''; position: absolute; width: 100%; height: 100%;
-            background-image: 
-                linear-gradient(rgba(79, 172, 254, 0.04) 1px, transparent 1px), 
-                linear-gradient(90deg, rgba(79, 172, 254, 0.04) 1px, transparent 1px);
+            background-image:
+                linear-gradient(rgba(88, 166, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(88, 166, 255, 0.03) 1px, transparent 1px);
             background-size: 30px 30px;
         }
 
         .train-marker {
-            position: absolute; width: 16px; height: 16px; background: var(--accent);
-            border: 3px solid #fff; border-radius: 50%; transform: translate(-50%, -50%);
-            transition: left 0.2s ease, top 0.2s ease; box-shadow: 0 0 12px var(--accent); z-index: 10;
+            position: absolute;
+            width: 16px; height: 16px;
+            background: var(--accent);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: left 0.2s ease, top 0.2s ease;
+            box-shadow: 0 0 12px var(--accent);
+            z-index: 10;
         }
 
         .train-marker.ems {
-            background: var(--danger); box-shadow: 0 0 15px var(--danger);
+            background: var(--danger);
+            box-shadow: 0 0 15px var(--danger);
             animation: marker-blink 0.6s infinite alternate;
         }
 
         .train-marker-label {
             position: absolute; top: -26px; left: 50%; transform: translateX(-50%);
-            background: rgba(7, 8, 15, 0.9); color: #fff; padding: 4px 8px;
-            border-radius: 6px; font-size: 11px; font-weight: bold; white-space: nowrap;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff; padding: 4px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: bold; white-space: nowrap;
             border: 1px solid var(--primary); pointer-events: none;
         }
 
         /* 열차 현황 카드 대시보드 */
         .grid-container {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 25px;
         }
 
         .train-card {
-            background: var(--panel-bg); border-radius: 16px; border: 1px solid var(--panel-border);
-            padding: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px);
-            display: flex; flex-direction: column; justify-content: space-between; transition: 0.3s;
+            background: linear-gradient(180deg, rgba(25, 27, 48, 0.9), rgba(18, 20, 36, 0.9));
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            backdrop-filter: blur(15px);
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: 0.3s;
         }
 
-        .train-card:hover { transform: translateY(-3px); border-color: rgba(79, 172, 254, 0.4); }
+        .train-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.15);
+            transform: translateY(-3px);
+        }
 
         .card-header {
             display: flex; justify-content: space-between; align-items: flex-start;
-            border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px; margin-bottom: 16px;
         }
 
         .v-name { font-size: 17px; font-weight: 700; color: #fff; }
         .train-id { font-size: 11px; color: var(--text-muted); font-family: 'Orbitron', sans-serif; }
-
         .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
         .info-label { color: var(--text-muted); }
         .info-value { font-weight: 700; color: var(--accent); }
 
         .limit-input-zone {
             display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 8px; margin: 15px 0;
-            border: 1px solid rgba(255,255,255,0.03);
+            background: rgba(0, 0, 0, 0.2); padding: 10px 14px;
+            border-radius: 8px; margin: 15px 0; border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
         .limit-input {
-            width: 65px; background: #07080f; border: 1px solid rgba(255,255,255,0.15);
+            width: 65px; background: #010409; border: 1px solid rgba(255, 255, 255, 0.15);
             color: #fff; padding: 6px; border-radius: 6px; text-align: center; font-weight: bold;
         }
 
         .limit-input:focus { outline: none; border-color: var(--primary); }
 
         .driver-zone {
-            display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.02);
-            padding: 12px; border-radius: 10px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.04);
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255, 255, 255, 0.02); padding: 12px;
+            border-radius: 10px; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .avatar { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--primary); background: #000; }
@@ -288,14 +315,14 @@
         .control-zone { display: flex; gap: 12px; }
 
         .btn {
-            flex: 1; padding: 12px; font-size: 13px; font-weight: 700; border: none;
-            border-radius: 8px; cursor: pointer; transition: 0.2s; color: white;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
+            flex: 1; padding: 12px; font-size: 13px; font-weight: 700;
+            border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+            color: white; display: flex; align-items: center; justify-content: center; gap: 6px;
         }
 
-        .btn-primary { background: var(--primary); }
-        .btn-primary:hover { background: #3a94e2; }
-        .btn-danger { background: var(--danger); box-shadow: 0 4px 12px rgba(255,77,109,0.2); }
+        .btn-primary { background: var(--primary); color: #000; }
+        .btn-primary:hover { background: #6cb3ff; }
+        .btn-danger { background: var(--danger); box-shadow: 0 4px 12px rgba(255, 77, 109, 0.2); }
         .btn-danger:hover { background: #e0435f; }
         .btn-safe { background: var(--success); }
         .btn-safe:hover { background: #27ae60; }
@@ -306,33 +333,28 @@
 
         /* 사용자 관리 및 로그 스타일 */
         .card-table-wrap {
-            background: var(--panel-bg); border-radius: 16px; border: 1px solid var(--panel-border);
-            padding: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            background: var(--panel-bg); border-radius: 16px;
+            border: 1px solid var(--panel-border); padding: 24px;
         }
 
         .admin-flex { display: flex; gap: 30px; align-items: flex-start; }
-        .admin-form { width: 320px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .admin-form { width: 320px; background: rgba(0, 0, 0, 0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
 
-        .custom-table {
-            width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px;
-        }
-
-        .custom-table th, .custom-table td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .custom-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
+        .custom-table th, .custom-table td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
         .custom-table th { color: var(--text-muted); font-weight: 500; font-size: 13px; }
 
         .log-box {
-            background: #07080f; border-radius: 12px; padding: 15px; height: 500px;
-            overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6;
-            border: 1px solid rgba(255,255,255,0.05);
+            background: #010409; border-radius: 12px; padding: 15px;
+            height: 500px; overflow-y: auto; font-family: 'Courier New', monospace;
+            font-size: 13px; line-height: 1.6; border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .log-line { margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 4px; }
+        .log-line { margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); padding-bottom: 4px; }
         .log-time { color: var(--primary); margin-right: 10px; }
         .log-user { color: var(--accent); font-weight: bold; margin-right: 6px; }
 
-        .no-trains {
-            text-align: center; color: var(--text-muted); font-size: 15px; padding: 60px 0; width: 100%; grid-column: 1 / -1;
-        }
+        .no-trains { text-align: center; color: var(--text-muted); font-size: 15px; padding: 60px 0; width: 100%; grid-column: 1 / -1; }
 
         @keyframes card-blink { 0% { box-shadow: 0 0 4px var(--danger-glow); } 100% { box-shadow: 0 0 16px var(--danger-glow); } }
         @keyframes marker-blink { 0% { transform: translate(-50%, -50%) scale(0.9); } 100% { transform: translate(-50%, -50%) scale(1.2); } }
@@ -341,7 +363,6 @@
 
 <body>
 
-    <!-- 1단계: 인증 오버레이 (로그인 구조) -->
     <div id="auth-overlay">
         <div class="auth-card">
             <h2>TCMS LOGIN</h2>
@@ -351,24 +372,22 @@
             </div>
             <div class="form-group">
                 <label><i class="fa-solid fa-lock"></i> 비밀번호</label>
-                <input type="password" id="login-pw" class="form-control" placeholder="Password를 입력하세요">
+                <input type="password" id="login-pw" class="form-control" placeholder="Password를 입력하세요" onkeyup="if(event.key==='Enter') handleLogin()">
             </div>
             <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="handleLogin()">시스템 접속</button>
         </div>
     </div>
 
-    <!-- 좌측 내비게이션 사이드바 -->
     <div class="sidebar">
         <div class="sidebar-brand">
             <i class="fa-solid fa-circle-nodes"></i> NEXT-TCMS
         </div>
-        
+
         <div class="user-profile-box">
-            <!-- 기본 최고 관리자(1번 유저) 아바타 및 동적 할당용 이미지 -->
-            <img id="my-avatar" src="https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=1&size=150x150&format=Png&isCircular=true" alt="My Avatar">
+            <img id="my-avatar" src="" alt="My Avatar">
             <div class="user-info">
-                <div class="u-name" id="session-username">운영자</div>
-                <div class="u-role" id="session-role">최고 관리자 권한</div>
+                <div class="u-name" id="session-username">대기 중</div>
+                <div class="u-role" id="session-role">-</div>
             </div>
         </div>
 
@@ -376,18 +395,17 @@
             <i class="fa-solid fa-chart-line"></i> 실시간 통합 관제
         </div>
         <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)">
-            <i class="fa-solid fa-users-gear"></i> 관제 계정 생성·관리
+            <i class="fa-solid fa-users-gear"></i> 계정 및 권한 관리
         </div>
         <div class="menu-item" onclick="switchView('logs', this)">
             <i class="fa-solid fa-file-shield"></i> 시스템 감사 로그
         </div>
-        
+
         <button class="btn btn-danger" style="margin-top: auto; padding: 8px;" onclick="handleLogout()">
             <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
         </button>
     </div>
 
-    <!-- 우측 메인 랩퍼 영역 -->
     <div class="main-wrapper">
         <div class="top-navbar">
             <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
@@ -397,20 +415,16 @@
         </div>
 
         <div class="content-body">
-            
-            <!-- 뷰 1: 실시간 통합 관제 대시보드 -->
             <div id="view-dashboard" class="view-section active">
                 <div class="map-section">
                     <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map</div>
                     <div class="map-container" id="live-map"></div>
                 </div>
-
                 <div class="grid-container" id="dashboard-grid">
                     <div class="no-trains" id="no-trains-msg">네트워크 연결 대기 중이거나 운행 중인 열차가 없습니다.</div>
                 </div>
             </div>
 
-            <!-- 뷰 2: 관제 권한 하위 계정 관리 서브 기능 -->
             <div id="view-accounts" class="view-section">
                 <div class="card-table-wrap">
                     <div class="section-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
@@ -425,12 +439,11 @@
                                 <input type="password" id="new-user-pw" class="form-control" placeholder="비밀번호 지정">
                             </div>
                             <div class="form-group">
-                                <label>연동할 로블록스 UserID (아바타 로드용)</label>
-                                <input type="number" id="new-user-rbx" class="form-control" value="1" placeholder="예: 2439581">
+                                <label>연동할 로블록스 UserID</label>
+                                <input type="number" id="new-user-rbx" class="form-control" value="1">
                             </div>
                             <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="createNewAccount()">계정 생성 및 발급</button>
                         </div>
-                        
                         <div style="flex: 1;">
                             <table class="custom-table">
                                 <thead>
@@ -442,86 +455,80 @@
                                         <th>상태</th>
                                     </tr>
                                 </thead>
-                                <tbody id="account-table-body">
-                                    <!-- 계정 리스트 동적 렌더링 영역 -->
-                                </tbody>
+                                <tbody id="account-table-body"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 뷰 3: 시스템 감사 로그 조회 기능 -->
             <div id="view-logs" class="view-section">
                 <div class="card-table-wrap">
                     <div class="section-title"><i class="fa-solid fa-terminal"></i> 실시간 관제 통제 및 명령어 감사 로그</div>
-                    <div class="log-box" id="log-display-container">
-                        <!-- 로그 데이터 실시간 출력 영역 -->
-                    </div>
+                    <div class="log-box" id="log-display-container"></div>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script>
-        // 초기 고정 최고 관리자 정보 사양
-        const MASTER_ADMIN = { id: "admin", pw: "1234", rbxId: 1, role: "최고 관리자" };
-        
-        // 로컬 브라우저 세션에 보관할 가상 계정 DB 초기화
-        let accountDB = JSON.parse(localStorage.getItem("tcms_accounts")) || [
-            { id: "admin", rbxId: 1, role: "최고 관리자" },
-            { id: "operator1", rbxId: 156, role: "일반 관제원" }
-        ];
-        
-        // 가상 패스워드 테이블 관리 (데모용 유효성 체크를 위함)
-        let pwdDB = { "admin": "1234", "operator1": "1234" };
-
+        let accountDB = [];
         let currentUserSession = null;
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
 
-        // 뷰 체인저 스위칭 함수
+        // 윈도우 로드 시 서버에서 계정 목록 동기화
+        window.onload = async () => {
+            await fetchAccounts();
+            addLog("System", "통합 철도 관제 운영 인프라 서버 접속 및 동기화 완료.");
+        };
+
+        // 서버에서 계정 정보 불러오기
+        async function fetchAccounts() {
+            try {
+                const res = await fetch('/api/accounts');
+                accountDB = await res.json();
+                renderAccounts();
+            } catch (e) {
+                console.error("서버에서 계정 목록을 가져오지 못했습니다.", e);
+            }
+        }
+
         function switchView(viewId, element) {
             document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
-            
             document.getElementById(`view-${viewId}`).classList.add('active');
             element.classList.add('active');
 
-            const titles = { dashboard: "실시간 기차 통합 대시보드", accounts: "관제원 계정 및 권한 관리 매니저", logs: "통합 보안 감사 로그 모니터" };
+            const titles = { dashboard: "실시간 기차 통합 대시보드", accounts: "계정 및 시스템 권한 관리", logs: "통합 보안 감사 로그 모니터" };
             document.getElementById('nav-title').innerText = titles[viewId] || "통합 관제 시스템";
         }
 
-        // 로그인 처리 엔진
-        function handleLogin() {
+        async function handleLogin() {
             const inputId = document.getElementById('login-id').value.trim();
             const inputPw = document.getElementById('login-pw').value.trim();
 
-            if(inputId === MASTER_ADMIN.id && inputPw === MASTER_ADMIN.pw) {
-                currentUserSession = MASTER_ADMIN;
-            } else if(pwdDB[inputId] && pwdDB[inputId] === inputPw) {
-                const found = accountDB.find(u => u.id === inputId);
-                currentUserSession = { id: found.id, rbxId: found.rbxId, role: found.role };
+            await fetchAccounts(); // 로그인 전 최신 DB 반영
+
+            const found = accountDB.find(u => u.id === inputId && u.pw === inputPw);
+            
+            if (found) {
+                currentUserSession = found;
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('session-username').innerText = currentUserSession.id;
+                document.getElementById('session-role').innerText = currentUserSession.role;
+                document.getElementById('my-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${currentUserSession.rbxId}&size=150x150&format=Png&isCircular=true`;
+
+                // 최고 관리자(lsrhjru) 여부에 따른 UI 노출 처리
+                if (currentUserSession.role !== "최고 관리자") {
+                    document.getElementById('menu-accounts').style.display = 'none';
+                } else {
+                    document.getElementById('menu-accounts').style.display = 'flex';
+                }
+
+                addLog("System", `관리자 [${currentUserSession.id}] 관제 센터 세션 로그인 성공.`);
             } else {
                 alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
-                return;
             }
-
-            // 세션UI 연동 및 아바타 새로고침
-            document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('session-username').innerText = currentUserSession.id;
-            document.getElementById('session-role').innerText = currentUserSession.role;
-            document.getElementById('my-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${currentUserSession.rbxId}&size=150x150&format=Png&isCircular=true`;
-
-            // 최고 관리자가 아니면 계정 생성 메뉴 차단 숨김 처리
-            if(currentUserSession.role !== "최고 관리자") {
-                document.getElementById('menu-accounts').style.display = 'none';
-            } else {
-                document.getElementById('menu-accounts').style.display = 'flex';
-            }
-
-            addLog("System", `계정 [${currentUserSession.id}] 관제 센터 세션 로그인 성공.`);
-            renderAccounts();
         }
 
         function handleLogout() {
@@ -531,9 +538,8 @@
             document.getElementById('auth-overlay').style.display = 'flex';
         }
 
-        // 새 하위 계정 생성 프로세스
-        function createNewAccount() {
-            if(!currentUserSession || currentUserSession.role !== "최고 Manager" && currentUserSession.id !== "admin") {
+        async function createNewAccount() {
+            if (!currentUserSession || currentUserSession.role !== "최고 관리자") {
                 alert("계정을 생성할 권한이 없습니다.");
                 return;
             }
@@ -542,24 +548,30 @@
             const newPw = document.getElementById('new-user-pw').value.trim();
             const newRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
 
-            if(!newId || !newPw) return alert("아이디와 비밀번호를 모두 올바르게 채워주십시오.");
-            if(accountDB.some(u => u.id === newId)) return alert("이미 존재하는 계정 아이디입니다.");
+            if (!newId || !newPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
 
-            const newAcc = { id: newId, rbxId: newRbx, role: "일반 관제원" };
-            accountDB.push(newAcc);
-            pwdDB[newId] = newPw;
-
-            localStorage.setItem("tcms_accounts", JSON.stringify(accountDB));
-            
-            document.getElementById('new-user-id').value = "";
-            document.getElementById('new-user-pw').value = "";
-            
-            renderAccounts();
-            addLog(currentUserSession.id, `새로운 하위 관제원 계정 발급 완료 (ID: ${newId}, RobloxID: ${newRbx})`);
-            alert(`관제원 계정 [${newId}]이 성공적으로 발급되었습니다.`);
+            try {
+                const res = await fetch('/api/accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: newId, pw: newPw, rbxId: newRbx, role: "일반 관제원" })
+                });
+                
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(`계정 [${newId}]이 성공적으로 서버에 발급되었습니다.`);
+                    document.getElementById('new-user-id').value = "";
+                    document.getElementById('new-user-pw').value = "";
+                    await fetchAccounts();
+                    addLog(currentUserSession.id, `하위 관제원 계정 신규 발급 완료 (ID: ${newId})`);
+                }
+            } catch(e) {
+                console.error("계정 생성 오류", e);
+            }
         }
 
-        // 계정 테이블 렌더링
         function renderAccounts() {
             const tbody = document.getElementById('account-table-body');
             tbody.innerHTML = "";
@@ -569,30 +581,29 @@
                     <td><img src="https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${u.rbxId}&size=150x150&format=Png&isCircular=true" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary);"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
-                    <td><span style="color:${u.role === '최고 관리자' ? 'var(--primary)': 'var(--text-muted)'}">${u.role}</span></td>
+                    <td><span style="color:${u.role === '최고 관리자' ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // 로그 시스템
         function addLog(user, message) {
             const container = document.getElementById('log-display-container');
             const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-            
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
             const logLine = document.createElement('div');
             logLine.className = 'log-line';
             logLine.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="log-user">@${user}</span> <span style="color:#fff;">${message}</span>`;
-            
+
             container.appendChild(logLine);
             container.scrollTop = container.scrollHeight;
         }
 
-        // 실시간 대시보드 동기화 코어 루틴[cite: 11]
+        // 실시간 대시보드 동기화 코어 루틴
         async function updateDashboard() {
-            if(!currentUserSession) return; // 로그인 상태가 아니면 대기
+            if (!currentUserSession) return;
 
             try {
                 const res = await fetch('/api/current-data');
@@ -612,7 +623,7 @@
 
                 if (noTrainsMsg) noTrainsMsg.remove();
 
-                // 1. 디스폰된 열차 클리어[cite: 11]
+                // 1. 디스폰 열차 클리어
                 document.querySelectorAll('.train-card').forEach(card => {
                     if (!trains[card.dataset.id]) card.remove();
                 });
@@ -620,12 +631,12 @@
                     if (!trains[marker.dataset.id]) marker.remove();
                 });
 
-                // 2. 다중 열차 실시간 렌더링[cite: 11]
+                // 2. 렌더링 루프
                 for (const id in trains) {
                     const train = trains[id];
                     const isEms = train.IsEmergency || train.remoteEmergencyActive;
 
-                    // 마커 관리[cite: 11]
+                    // 맵 마커 처리
                     let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
                     if (!marker) {
                         marker = document.createElement('div');
@@ -636,7 +647,7 @@
                         marker.appendChild(label);
                         map.appendChild(marker);
                     }
-                    
+
                     if (isEms) marker.classList.add('ems');
                     else marker.classList.remove('ems');
 
@@ -646,7 +657,7 @@
                     marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
                     marker.querySelector('.train-marker-label').innerText = `${train.TrainName.split(' ')[0]} (${train.CurrentSpeed}km/h)`;
 
-                    // 제어 카드 바인딩[cite: 11]
+                    // 대시보드 카드 생성 및 갱신
                     let card = document.querySelector(`.train-card[data-id="${id}"]`);
                     if (!card) {
                         card = document.createElement('div');
@@ -691,10 +702,10 @@
                         grid.appendChild(card);
                     }
 
-                    // 속도 및 제어단수 매핑[cite: 11]
+                    // 수치 동기화
                     card.querySelector('.v-name').innerText = train.TrainName;
                     card.querySelector('.v-speed').innerText = `${train.CurrentSpeed} km/h (제한: ${train.SpeedLimit || 80} km/h)`;
-                    
+
                     let notchText = "N";
                     if (train.CurrentNotch > 0) notchText = "P" + train.CurrentNotch;
                     else if (train.CurrentNotch < 0) notchText = (train.CurrentNotch === -5) ? "EB (비상)" : "B" + Math.abs(train.CurrentNotch);
@@ -705,6 +716,12 @@
                     else if (train.CurrentReverser === -1) revText = "후진 (B)";
                     card.querySelector('.v-rev').innerText = revText;
                     card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
+                    
+                    // 인풋 박스가 포커스 되지 않았을 때만 서버의 SpeedLimit 값으로 동기화
+                    const limitInput = card.querySelector('.limit-input');
+                    if (document.activeElement !== limitInput) {
+                        limitInput.value = train.SpeedLimit || 80;
+                    }
 
                     const badge = card.querySelector('.v-badge');
                     if (train.remoteEmergencyActive) {
@@ -712,26 +729,26 @@
                         badge.innerText = "원격 강제 제동";
                     } else if (train.IsEmergency) {
                         badge.className = "status-badge status-ems";
-                        badge.innerText = "과속/비상 정지 체결";
+                        badge.innerText = "과속/비상 체결";
                     } else {
                         badge.className = "status-badge status-normal";
                         badge.innerText = "정상 신호 운영";
                     }
 
-                    const targetUserId = train.DriverId > 0 ? train.DriverId : 1; 
+                    const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
                     card.querySelector('.v-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${targetUserId}&size=150x150&format=Png&isCircular=true`;
                     card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
                 }
             } catch (e) {
-                console.error("대시보드 동기화 대기 중...", e);
+                console.error("대시보드 동기화 오류...", e);
             }
         }
 
-        // 각 통제 액션 및 로그 수집[cite: 11]
+        // 통제 액션 함수
         async function setSpeedLimit(trainId, buttonObj) {
             const inputVal = parseInt(buttonObj.previousElementSibling.value);
-            if(isNaN(inputVal) || inputVal < 0) return alert("올바른 속도를 입력하세요.");
-            
+            if (isNaN(inputVal) || inputVal < 0) return alert("올바른 속도를 입력하세요.");
+
             await fetch('/api/web-speedlimit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -746,7 +763,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId })
             });
-            addLog(currentUserSession.id, `⚠️ 열차 [${trainId}]에 대시보드 원격 비상 정지(EMS) 명령 강제 전송!`);
+            addLog(currentUserSession.id, `⚠️ 열차 [${trainId}] 원격 비상 정지(EMS) 강제 발령!`);
         }
 
         async function resetEmergency(trainId) {
@@ -755,14 +772,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId })
             });
-            addLog(currentUserSession.id, `✅ 열차 [${trainId}] 원격 비상 상태 해제 신호 전송 완료.`);
+            addLog(currentUserSession.id, `✅ 열차 [${trainId}] 원격 비상 상태 해제 전송.`);
         }
 
-        // 실시간 폴링 루프 가동[cite: 11]
-        setInterval(updateDashboard, 100);
-        
-        // 초기 임시 로그 
-        addLog("System", "통합 철도 관제 운영 인프라 서버 초기화 완료.");
+        // 1초 단위로 폴링 주기 조정 (서버 부하 방지 및 안정성)
+        setInterval(updateDashboard, 1000);
+
     </script>
 </body>
 
