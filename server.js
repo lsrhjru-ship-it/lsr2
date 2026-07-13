@@ -96,33 +96,33 @@ app.get('/api/avatar/:rbxId', async (req, res) => {
 });
 
 // server.js 의 [API] 열차 상태 수신 부분을 아래로 교체하세요
+// [API] 열차 상태 수신 수정본
 app.post('/api/train-status', (req, res) => {
-    const { TrainId, CurrentSpeed, PositionX, PositionZ, TrainName, CurrentNotch, CurrentReverser, DriverName, DriverId, IsEmergency } = req.body;
-
+    const { TrainId } = req.body;
     if (!TrainId) return res.status(400).json({ error: "TrainId 없음" });
 
-    // 1. 기존 데이터 확인
+    // 1. 기존에 서버에 저장된 데이터 확인
     const oldData = trains[TrainId];
-    
-    // 2. 서버에 이미 변경된 제한속도가 있다면 그 값을 유지, 없다면 로블록스에서 보낸 값을 사용
-    const newSpeedLimit = (oldData && oldData.SpeedLimit) ? oldData.SpeedLimit : (req.body.SpeedLimit || 80);
-    const newEmergency = (oldData && oldData.remoteEmergencyActive !== undefined) ? oldData.remoteEmergencyActive : false;
 
-    // 3. 데이터 업데이트
+    // 2. 서버에 이미 설정된 제한속도가 있다면 그 값을 우선 사용
+    // 없다면 로블록스가 보낸 값을 사용함
+    const currentLimit = (oldData && oldData.SpeedLimit) ? oldData.SpeedLimit : (req.body.SpeedLimit || 80);
+    const remoteEmergency = (oldData && oldData.remoteEmergencyActive !== undefined) ? oldData.remoteEmergencyActive : false;
+
+    // 3. 서버에 상태 저장 (로블록스가 보낸 속도값은 여기서 무시하고 currentLimit을 유지)
     trains[TrainId] = {
-        TrainId, CurrentSpeed, PositionX, PositionZ, TrainName, CurrentNotch, CurrentReverser, DriverName, DriverId, IsEmergency,
-        SpeedLimit: newSpeedLimit,
-        remoteEmergencyActive: newEmergency,
+        ...req.body,
+        SpeedLimit: currentLimit, 
+        remoteEmergencyActive: remoteEmergency,
         lastSeen: Date.now()
     };
 
-    // 4. 응답으로 유지된 값을 다시 보내줌 (로블록스 기차 스크립트가 이걸 읽어서 적용함)
+    // 4. 응답으로 유지된 값을 로블록스 기차로 다시 전송
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit
     });
 });
-
 // server.js의 [API] 대시보드 데이터 전송 부분을 아래와 같이 수정
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
