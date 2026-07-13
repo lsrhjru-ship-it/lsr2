@@ -43,11 +43,28 @@ app.post('/api/accounts', (req, res) => {
     res.json({ success: true });
 });
 
-// 🌟 [API] 관제원 계정 삭제 기능 (추가됨)
+// 🌟 [API] 관제원 정보 수정 기능 (추가됨)
+app.post('/api/accounts/update', (req, res) => {
+    const { id, pw, rbxId, role } = req.body;
+    
+    const account = accounts.find(a => a.id === id);
+    if (!account) {
+        return res.status(404).json({ error: "해당 계정을 찾을 수 없습니다." });
+    }
+
+    // 값 변경 (입력된 값이 있을 때만 변경)
+    if (pw) account.pw = pw;
+    if (rbxId !== undefined) account.rbxId = parseInt(rbxId) || 1;
+    if (role) account.role = role;
+
+    saveAccounts();
+    res.json({ success: true });
+});
+
+// [API] 관제원 계정 삭제 기능
 app.delete('/api/accounts/:id', (req, res) => {
     const targetId = req.params.id;
     
-    // 최고 관리자 원본 계정은 삭제 불가 안전장치
     if (targetId === "lsrhjru") {
         return res.status(400).json({ error: "최고 시스템 관리자 마스터 계정은 삭제할 수 없습니다." });
     }
