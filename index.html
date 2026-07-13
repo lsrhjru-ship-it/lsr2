@@ -23,7 +23,6 @@
             text-shadow: 0 0 10px rgba(79, 172, 254, 0.3);
         }
 
-        /* [신규] 실시간 모니터링 관제 지도 스타일 */
         .map-section {
             max-width: 1200px;
             width: 100%;
@@ -33,6 +32,7 @@
             padding: 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             margin-bottom: 25px;
+            box-sizing: border-box;
         }
 
         .map-title {
@@ -46,7 +46,7 @@
 
         .map-container {
             width: 100%;
-            height: 350px;
+            height: 450px;
             background: #151622;
             border-radius: 8px;
             border: 1px solid #2a2b3d;
@@ -54,7 +54,6 @@
             overflow: hidden;
         }
 
-        /* 지도 배경 격자선 효과 */
         .map-container::before {
             content: '';
             position: absolute;
@@ -64,7 +63,6 @@
             background-size: 20px 20px;
         }
 
-        /* 지도 위 열차 마커 스타일 */
         .train-marker {
             position: absolute;
             width: 14px;
@@ -73,10 +71,9 @@
             border: 2px solid #fff;
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            transition: left 0.5s linear, top 0.5s linear;
+            transition: left 0.1s linear, top 0.1s linear;
             box-shadow: 0 0 8px #00f2fe;
             z-index: 10;
-            cursor: pointer;
         }
 
         .train-marker.ems {
@@ -87,22 +84,22 @@
 
         .train-marker-label {
             position: absolute;
-            top: -20px;
+            top: -22px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             color: #fff;
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 10px;
             white-space: nowrap;
             border: 1px solid #4facfe;
+            pointer-events: none;
         }
 
-        /* 기차 카드 그리드 레이아웃 */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 20px;
             max-width: 1200px;
             width: 100%;
@@ -148,6 +145,37 @@
             color: #00f2fe;
         }
 
+        .limit-input-zone {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1c1d2a;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .limit-input {
+            width: 70px;
+            background: #242536;
+            border: 1px solid #4facfe;
+            color: #fff;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            background: #4facfe;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
         .driver-zone {
             display: flex;
             align-items: center;
@@ -155,7 +183,7 @@
             background: #1c1d2a;
             padding: 10px;
             border-radius: 8px;
-            margin: 15px 0;
+            margin: 12px 0;
         }
 
         .avatar {
@@ -174,7 +202,7 @@
         .control-zone {
             display: flex;
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         .btn {
@@ -189,21 +217,10 @@
             color: white;
         }
 
-        .btn-danger {
-            background: #ff4d4d;
-        }
-
-        .btn-danger:hover {
-            background: #ff3333;
-        }
-
-        .btn-safe {
-            background: #2ecc71;
-        }
-
-        .btn-safe:hover {
-            background: #27ae60;
-        }
+        .btn-danger { background: #ff4d4d; }
+        .btn-danger:hover { background: #ff3333; }
+        .btn-safe { background: #2ecc71; }
+        .btn-safe:hover { background: #27ae60; }
 
         .status-badge {
             padding: 3px 6px;
@@ -212,40 +229,11 @@
             font-weight: bold;
         }
 
-        .status-normal {
-            background: #2ecc71;
-            color: white;
-        }
+        .status-normal { background: #2ecc71; color: white; }
+        .status-ems { background: #ff4d4d; color: white; animation: blink 1s infinite; }
 
-        .status-ems {
-            background: #ff4d4d;
-            color: white;
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        @keyframes marker-blink {
-
-            0%,
-            100% {
-                transform: translate(-50%, -50%) scale(1);
-            }
-
-            50% {
-                transform: translate(-50%, -50%) scale(1.3);
-            }
-        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes marker-blink { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.3); } }
 
         .no-trains {
             text-align: center;
@@ -261,22 +249,17 @@
 <body>
     <h1>INTEGRATED TRAIN CONTROL CENTER</h1>
 
-    <!-- [신규] 실시간 지도 섹션 -->
     <div class="map-section">
         <div class="map-title">실시간 열차 위치 모니터링 맵 (Live Tracking)</div>
-        <div class="map-container" id="live-map">
-            <!-- 자바스크립트로 기차 점들이 실시간 생성됨 -->
-        </div>
+        <div class="map-container" id="live-map"></div>
     </div>
 
-    <!-- 기차 개별 제어 카드 판넬 -->
     <div class="grid-container" id="dashboard-grid">
-        <div class="no-trains">운행 중인 열차가 없어 대시보드가 대기 중입니다.</div>
+        <div class="no-trains" id="no-trains-msg">운행 중인 열차가 없어 대시보드가 대기 중입니다.</div>
     </div>
 
     <script>
-        // [★ 중요] 로블록스 월드(맵)의 크기에 맞춰 범위를 설정하세요.
-        // 기차가 가장 멀리 갈 수 있는 최소/최대 X, Z 좌표를 적어주면 지도 크기에 맞춰 자동 비례 계산됩니다.
+        // 본인의 로블록스 인게임 맵 실제 최소/최대 좌표계 세팅
         const ROBLOX_MAP_BOUNDS = {
             minX: -3000,
             maxX: 3000,
@@ -291,124 +274,161 @@
 
                 const grid = document.getElementById('dashboard-grid');
                 const map = document.getElementById('live-map');
+                const noTrainsMsg = document.getElementById('no-trains-msg');
 
-                // 지도 내부 초기화 (배경 격자선 제외)
-                map.innerHTML = '';
+                const currentIds = Object.keys(trains);
 
-                if (Object.keys(trains).length === 0) {
-                    grid.innerHTML = '<div class="no-trains">운행 중인 열차가 없어 대시보드가 대기 중입니다.</div>';
+                if (currentIds.length === 0) {
+                    grid.innerHTML = '<div class="no-trains" id="no-trains-msg">운행 중인 열차가 없어 대시보드가 대기 중입니다.</div>';
+                    map.innerHTML = '';
                     return;
                 }
 
-                let htmlContent = '';
+                if (noTrainsMsg) noTrainsMsg.remove();
 
+                // 1. 제거된 열차 청소 (DOM 엘리먼트 삭제)
+                document.querySelectorAll('.train-card').forEach(card => {
+                    if (!trains[card.dataset.id]) card.remove();
+                });
+                document.querySelectorAll('.train-marker').forEach(marker => {
+                    if (!trains[marker.dataset.id]) marker.remove();
+                });
+
+                // 2. 데이터 업데이트 및 신규 열차 렌더링
                 for (const id in trains) {
                     const train = trains[id];
-                    const isEms = train.IsEmergency || train.remoteEmergencyActive;
+                    const isEms = train.IsEmergency || train.remoteEmergencyActive;[cite: 6]
 
-                    // ============================================================
-                    // [신규] 지도 위에 기차 위치 도트(점) 그리기 로직
-                    // ============================================================
-                    const rawX = train.PositionX || 0;
-                    const rawZ = train.PositionZ || 0;
+                    // --- 지도 레이어 마커 제어 ---
+                    let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
+                    if (!marker) {
+                        marker = document.createElement('div');
+                        marker.className = 'train-marker';
+                        marker.dataset.id = id;
+                        const label = document.createElement('div');
+                        label.className = 'train-marker-label';
+                        marker.appendChild(label);
+                        map.appendChild(marker);
+                    }
+                    
+                    if (isEms) marker.classList.add('ems');
+                    else marker.classList.remove('ems');
 
-                    // 로블록스 좌표계를 웹 브라우저 % 비율 좌표로 변환
-                    let pctX = ((rawX - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
-                    let pctZ = ((rawZ - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
+                    // 좌표 계산식 버그 수정 (격자 정 중앙 맞춤)
+                    let pctX = ((train.PositionX - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;[cite: 6]
+                    let pctZ = ((train.PositionZ - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;[cite: 6]
+                    marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;[cite: 6]
+                    marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;[cite: 6]
+                    marker.querySelector('.train-marker-label').innerText = `${train.TrainName.split(' ')[0]} (${train.CurrentSpeed}km/h)`;
 
-                    // 지도를 벗어나지 않게 범위 제한 (0% ~ 100%)
-                    pctX = Math.max(0, Math.min(100, pctX));
-                    pctZ = Math.max(0, Math.min(100, pctZ));
+                    // --- 대시보드 카드 레이어 제어 ---
+                    let card = document.querySelector(`.train-card[data-id="${id}"]`);
+                    if (!card) {
+                        card = document.createElement('div');
+                        card.className = 'train-card';
+                        card.dataset.id = id;
+                        card.innerHTML = `
+                            <div>
+                                <div class="card-header">
+                                    <span class="v-name"></span>
+                                    <span class="train-id">ID: ${id}</span>
+                                </div>
+                                <div class="info-row"><span>현재 속도</span><span class="info-value v-speed">0 km/h</span></div>
+                                <div class="info-row"><span>제어 단수</span><span class="info-value v-notch">N</span></div>
+                                <div class="info-row"><span>역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
+                                <div class="info-row"><span>현재 위치 (X, Z)</span><span class="info-value v-pos" style="color:#a0a5c2;">0, 0</span></div>
+                                <div class="limit-input-zone">
+                                    <span>ATC 제한속도 설정</span>
+                                    <div>
+                                        <input type="number" class="limit-input" value="${train.SpeedLimit || 80}">
+                                        <button class="btn-sm" onclick="setSpeedLimit('${id}', this)">설정</button>
+                                    </div>
+                                </div>
+                                <div class="info-row">
+                                    <span>안전 상태</span>
+                                    <span class="status-badge v-badge">정상</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="driver-zone">
+                                    <img class="avatar v-avatar" src="" alt="Driver">
+                                    <div class="driver-name v-driver">대기 중</div>
+                                </div>
+                                <div class="control-zone">
+                                    <button class="btn btn-danger" onclick="triggerEmergency('${id}')">비상정지</button>
+                                    <button class="btn btn-safe" onclick="resetEmergency('${id}')">해제</button>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    }
 
-                    // 지도용 점(마커) HTML 생성
-                    const marker = document.createElement('div');
-                    marker.className = `train-marker ${isEms ? 'ems' : ''}`;
-                    marker.style.left = `${pctX}%`;
-                    marker.style.top = `${pctZ}%`; // 로블록스의 Z는 2D 지도의 Y축(Top)에 매핑됩니다.
-
-                    // 점 위에 띄울 툴팁 라벨
-                    const label = document.createElement('div');
-                    label.className = 'train-marker-label';
-                    label.innerText = train.TrainName.split(' ')[0] || "열차"; // 이름이 길면 첫 단어만 표시
-
-                    marker.appendChild(label);
-                    map.appendChild(marker);
-
-                    // ============================================================
-                    // 기존 하단 기차 제어 정보 카드 매핑
-                    // ============================================================
+                    // 버버벅거림 없는 실시간 텍스트 데이터 교체
+                    card.querySelector('.v-name').innerText = train.TrainName;
+                    card.querySelector('.v-speed').innerText = `${train.CurrentSpeed} km/h (제한: ${train.SpeedLimit || 80} km/h)`;
+                    
                     let notchText = "N";
                     if (train.CurrentNotch > 0) notchText = "P" + train.CurrentNotch;
-                    else if (train.CurrentNotch < 0) notchText = "B" + Math.abs(train.CurrentNotch);
+                    else if (train.CurrentNotch < 0) notchText = (train.CurrentNotch === -5) ? "EB (비상)" : "B" + Math.abs(train.CurrentNotch);
+                    card.querySelector('.v-notch').innerText = notchText;
 
                     let revText = "중립 (N)";
                     if (train.CurrentReverser === 1) revText = "전진 (F)";
                     else if (train.CurrentReverser === -1) revText = "후진 (B)";
+                    card.querySelector('.v-rev').innerText = revText;
+                    card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
 
-                    const badgeClass = isEms ? "status-badge status-ems" : "status-badge status-normal";
-                    const badgeText = isEms ? "비상 정지" : "정상 운행";
+                    const badge = card.querySelector('.v-badge');
+                    if (train.remoteEmergencyActive) {
+                        badge.className = "status-badge status-ems";
+                        badge.innerText = "원격 정지 발령";
+                    } else if (train.IsEmergency) {
+                        badge.className = "status-badge status-ems";
+                        badge.innerText = "비상 정지 체결";
+                    } else {
+                        badge.className = "status-badge status-normal";
+                        badge.innerText = "정상 운행";
+                    }
 
-                    const avatarUrl = train.DriverId > 0
-                        ? `https://www.roblox.com/headshot-thumbnail/image?userId=${train.DriverId}&width=150&height=150&format=png`
-                        : `https://www.roblox.com/headshot-thumbnail/image?userId=0&width=150&height=150&format=png`;
-
-                    htmlContent += `
-                    <div class="train-card">
-                        <div>
-                            <div class="card-header">
-                                <span>${train.TrainName}</span>
-                                <span class="train-id">ID: ${id}</span>
-                            </div>
-                            <div class="info-row"><span>현재 속도</span><span class="info-value">${train.CurrentSpeed} km/h</span></div>
-                            <div class="info-row"><span>제어 단수</span><span class="info-value">${notchText}</span></div>
-                            <div class="info-row"><span>역전기 방향</span><span class="info-value">${revText}</span></div>
-                            <div class="info-row"><span>현재 위치 (X, Z)</span><span class="info-value" style="color:#a0a5c2;">${rawX}, ${rawZ}</span></div>
-                            <div class="info-row">
-                                <span>안전 상태</span>
-                                <span class="${badgeClass}">${badgeText}</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="driver-zone">
-                                <img class="avatar" src="${avatarUrl}" alt="Driver">
-                                <div class="driver-name">${train.DriverName || '승무원 없음'}</div>
-                            </div>
-                            <div class="control-zone">
-                                <button class="btn btn-danger" onclick="triggerEmergency('${id}')">비상정지</button>
-                                <button class="btn btn-safe" onclick="resetEmergency('${id}')">해제</button>
-                            </div>
-                        </div>
-                    </div>
-                    `;
+                    // 최신화된 안전한 로블록스 썸네일 경로 매핑 버그 수정
+                    const targetUserId = train.DriverId > 0 ? train.DriverId : 1; 
+                    card.querySelector('.v-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${targetUserId}&size=150x150&format=Png&isCircular=true`;
+                    card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
                 }
-
-                grid.innerHTML = htmlContent;
-
             } catch (e) {
                 console.error("대시보드 동기화 실패", e);
             }
+        }
+
+        async function setSpeedLimit(trainId, buttonObj) {
+            const inputVal = parseInt(buttonObj.previousElementSibling.value);
+            if(isNaN(inputVal) || inputVal < 0) return alert("올바른 속도를 입력하세요.");
+            
+            await fetch('/api/web-speedlimit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId, speedLimit: inputVal })
+            });
         }
 
         async function triggerEmergency(trainId) {
             await fetch('/api/web-emergency', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ trainId: trainId })
+                body: JSON.stringify({ trainId: trainId })[cite: 6]
             });
-            updateDashboard();
         }
 
         async function resetEmergency(trainId) {
             await fetch('/api/web-reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ trainId: trainId })
+                body: JSON.stringify({ trainId: trainId })[cite: 6]
             });
-            updateDashboard();
         }
 
-        setInterval(updateDashboard, 1000);
+        // 0.1초(100ms) 단위 초고속 갱신으로 버버벅거림 제거
+        setInterval(updateDashboard, 100);
         updateDashboard();
     </script>
 </body>
