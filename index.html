@@ -608,7 +608,7 @@
         </div>
 
         <div class="user-profile-box">
-            <img id="my-avatar" src="" alt="Avatar">
+            <img id="my-avatar" src="https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png" alt="Avatar">
             <div class="user-info">
                 <div class="u-name" id="session-username">대기 중</div>
                 <div class="u-role" id="session-role">-</div>
@@ -634,16 +634,14 @@
         <div class="top-navbar">
             <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
             <div>
-                <span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM
-                    LIVE</span>
+                <span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM LIVE</span>
             </div>
         </div>
 
         <div class="content-body">
             <div id="view-dashboard" class="view-section active">
                 <div class="map-section">
-                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map
-                    </div>
+                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map</div>
                     <div class="map-container" id="live-map"></div>
                 </div>
                 <div class="grid-container" id="dashboard-grid">
@@ -709,7 +707,6 @@
             addLog("System", "통합 철도 관제 운영 인프라 서버 접속 및 동기화 완료.");
         };
 
-        // 서버에서 계정 DB 가져오기
         async function fetchAccounts() {
             try {
                 const res = await fetch('/api/accounts');
@@ -720,7 +717,6 @@
             }
         }
 
-        // 메뉴 이동
         function switchView(viewId, element) {
             document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
@@ -731,12 +727,11 @@
             document.getElementById('nav-title').innerText = titles[viewId] || "통합 관제 시스템";
         }
 
-        // 로그인 처리
         async function handleLogin() {
             const inputId = document.getElementById('login-id').value.trim();
             const inputPw = document.getElementById('login-pw').value.trim();
 
-            await fetchAccounts(); // 로그인 전 최신 DB 반영
+            await fetchAccounts(); 
 
             const found = accountDB.find(u => u.id === inputId && u.pw === inputPw);
 
@@ -746,10 +741,10 @@
                 document.getElementById('session-username').innerText = currentUserSession.id;
                 document.getElementById('session-role').innerText = currentUserSession.role;
                 
-                // 최적화된 고속 주소 적용 (본인 프로필)
-                document.getElementById('my-avatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${currentUserSession.rbxId}&width=150&height=150&format=png`;
+                // 유저 아바타 동적 바인딩 로직 강화 (기본값 파싱 안전장치 추가)
+                const rbxId = Number(currentUserSession.rbxId) || 1;
+                document.getElementById('my-avatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${rbxId}&width=150&height=150&format=png`;
 
-                // 최고 관리자 권한 확인 후 메뉴 보이기/숨기기
                 if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자" && currentUserSession.role !== "admin") {
                     document.getElementById('menu-accounts').style.display = 'none';
                 } else {
@@ -757,23 +752,22 @@
                 }
 
                 addLog("System", `관리자 [${currentUserSession.id}] 관제 센터 세션 로그인 성공.`);
-                renderAccounts(); // 버튼 활성화를 위해 로그인 후 리렌더링
+                renderAccounts(); 
             } else {
                 alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
             }
         }
 
-        // 로그아웃 처리
         function handleLogout() {
             currentUserSession = null;
             document.getElementById('login-id').value = "";
             document.getElementById('login-pw').value = "";
             document.getElementById('auth-overlay').style.display = 'flex';
+            document.getElementById('my-avatar').src = "https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png";
 
             switchView('dashboard', document.querySelector('.menu-item'));
         }
 
-        // 계정 발급 (서버로 전송)
         async function createNewAccount() {
             if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자" && currentUserSession.role !== "admin")) {
                 alert("계정을 생성할 권한이 없습니다.");
@@ -808,7 +802,6 @@
             }
         }
 
-        // 계정 테이블 렌더링 (수정/삭제 조작부 추가)
         function renderAccounts() {
             const tbody = document.getElementById('account-table-body');
             tbody.innerHTML = "";
@@ -818,7 +811,6 @@
                 
                 let actionButtons = `<span style="color:var(--text-muted); font-size:12px;">권한 없음</span>`;
                 
-                // 현재 세션이 최고 관리자 계정일 때만 조작 인터페이스 동적 노출
                 if (currentUserSession && (currentUserSession.id === 'lsrhjru' || currentUserSession.role === '최고 관리자' || currentUserSession.role === 'admin')) {
                     actionButtons = `
                         <button class="btn btn-primary" style="padding:4px 8px; font-size:11px; display:inline-block; margin-right:4px;" onclick="editAccount('${u.id}', '${u.pw}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen"></i> 수정</button>
@@ -826,11 +818,12 @@
                     `;
                 }
 
-                // 최적화된 고속 주소 적용 (계정 목록 테이블)
+                const targetRbxId = Number(u.rbxId) || 1;
+
                 tr.innerHTML = `
-                    <td><img src="https://www.roblox.com/headshot-thumbnail/image?userId=${u.rbxId}&width=150&height=150&format=png" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
+                    <td><img src="https://www.roblox.com/headshot-thumbnail/image?userId=${targetRbxId}&width=150&height=150&format=png" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
                     <td style="font-weight:bold;">${u.id}</td>
-                    <td>${u.rbxId}</td>
+                    <td>${targetRbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
                     <td>${actionButtons}</td>
@@ -839,7 +832,6 @@
             });
         }
 
-        // 계정 정보 수정 기능
         async function editAccount(id, currentPw, currentRbxId, currentRole) {
             const newPw = prompt(`[${id}] 계정의 새로운 비밀번호를 입력하세요 (기존 유지 시 공백):`, currentPw);
             if (newPw === null) return;
@@ -870,7 +862,6 @@
             }
         }
 
-        // 계정 삭제 기능
         async function deleteAccount(id) {
             if (!confirm(`정말로 계정 [${id}]을 데이터베이스에서 영구 삭제하시겠습니까?`)) return;
 
@@ -891,7 +882,6 @@
             }
         }
 
-        // 시스템 로그 기록
         function addLog(user, message) {
             const container = document.getElementById('log-display-container');
             const now = new Date();
@@ -905,7 +895,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // 실시간 대시보드 동기화 
+        // 실시간 대시보드 동기화 (항목 중복 생성 방지 및 식별 데이터 매핑 강화)
         async function updateDashboard() {
             if (!currentUserSession) return;
 
@@ -927,6 +917,7 @@
 
                 if (noTrainsMsg) noTrainsMsg.remove();
 
+                // 1. 디스폰된 열차의 카드 및 맵 마커 제거
                 document.querySelectorAll('.train-card').forEach(card => {
                     if (!trains[card.dataset.id]) card.remove();
                 });
@@ -934,10 +925,14 @@
                     if (!trains[marker.dataset.id]) marker.remove();
                 });
 
+                // 2. 고유 ID 식별자 기반 기차 인스턴스 렌더링 루프
                 for (const id in trains) {
                     const train = trains[id];
-                    const isEms = train.IsEmergency || train.remoteEmergencyActive;
+                    
+                    // 형변환 에러 완전 차단을 위해 불리언 변환 처리 강제 적용
+                    const isEms = (train.IsEmergency === true || train.IsEmergency === "true" || train.remoteEmergencyActive === true || train.remoteEmergencyActive === "true");
 
+                    // [지도 마커 제어 부]
                     let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
                     if (!marker) {
                         marker = document.createElement('div');
@@ -952,12 +947,13 @@
                     if (isEms) marker.classList.add('ems');
                     else marker.classList.remove('ems');
 
-                    let pctX = ((train.PositionX - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
-                    let pctZ = ((train.PositionZ - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
+                    let pctX = ((Number(train.PositionX) - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
+                    let pctZ = ((Number(train.PositionZ) - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
                     marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;
                     marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
                     marker.querySelector('.train-marker-label').innerText = `${train.TrainName.split(' ')[0]} (${train.CurrentSpeed}km/h)`;
 
+                    // [개별 기차 카드 제어 부 - 중복 생성 오류 원천 수정]
                     let card = document.querySelector(`.train-card[data-id="${id}"]`);
                     if (!card) {
                         card = document.createElement('div');
@@ -966,7 +962,7 @@
                         card.innerHTML = `
                             <div>
                                 <div class="card-header">
-                                    <span class="v-name"></span>
+                                    <span class="v-name">${train.TrainName}</span>
                                     <span class="train-id">ID: ${id}</span>
                                 </div>
                                 <div class="info-row"><span class="info-label">현재 속도</span><span class="info-value v-speed">0 km/h</span></div>
@@ -1002,17 +998,20 @@
                         grid.appendChild(card);
                     }
 
+                    // 매 초마다 들어오는 고유 실시간 값들 매핑 타겟 클래스로 정확히 고정
                     card.querySelector('.v-name').innerText = train.TrainName;
                     card.querySelector('.v-speed').innerText = `${train.CurrentSpeed} km/h (제한: ${train.SpeedLimit || 80} km/h)`;
 
                     let notchText = "N";
-                    if (train.CurrentNotch > 0) notchText = "P" + train.CurrentNotch;
-                    else if (train.CurrentNotch < 0) notchText = (train.CurrentNotch === -5) ? "EB (비상)" : "B" + Math.abs(train.CurrentNotch);
+                    const currentNotch = Number(train.CurrentNotch);
+                    if (currentNotch > 0) notchText = "P" + currentNotch;
+                    else if (currentNotch < 0) notchText = (currentNotch === -5) ? "EB (비상)" : "B" + Math.abs(currentNotch);
                     card.querySelector('.v-notch').innerText = notchText;
 
                     let revText = "중립 (N)";
-                    if (train.CurrentReverser === 1) revText = "전진 (F)";
-                    else if (train.CurrentReverser === -1) revText = "후진 (B)";
+                    const currentRev = Number(train.CurrentReverser);
+                    if (currentRev === 1) revText = "전진 (F)";
+                    else if (currentRev === -1) revText = "후진 (B)";
                     card.querySelector('.v-rev').innerText = revText;
                     card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
 
@@ -1021,21 +1020,18 @@
                         limitInput.value = train.SpeedLimit || 80;
                     }
 
+                    // 비상 정지 상태 UI 즉시 전환 버그 수정부
                     const badge = card.querySelector('.v-badge');
-                    if (train.remoteEmergencyActive) {
+                    if (isEms) {
                         badge.className = "status-badge status-ems";
-                        badge.innerText = "원격 강제 제동";
-                    } else if (train.IsEmergency) {
-                        badge.className = "status-badge status-ems";
-                        badge.innerText = "과속/비상 체결";
+                        badge.innerText = (train.remoteEmergencyActive === true || train.remoteEmergencyActive === "true") ? "원격 강제 제동" : "과속/비상 체결";
                     } else {
                         badge.className = "status-badge status-normal";
                         badge.innerText = "정상 신호 운영";
                     }
 
-                    // 최적화된 고속 주소 적용 (실시간 대시보드 기장 카드)
-                    const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
-                    card.querySelector('.v-avatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${targetUserId}&width=150&height=150&format=png`;
+                    const targetDriverId = Number(train.DriverId) > 0 ? Number(train.DriverId) : 1;
+                    card.querySelector('.v-avatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${targetDriverId}&width=150&height=150&format=png`;
                     card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
                 }
             } catch (e) {
