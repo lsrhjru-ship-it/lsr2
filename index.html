@@ -33,7 +33,7 @@
                 radial-gradient(circle at 85% 30%, rgba(0, 242, 254, 0.04), transparent 30%);
         }
 
-        /* 1. 로그인 인증 레이어 */
+        /* 로그인 인증 레이어 */
         #auth-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 6, 15, 0.95); z-index: 9999;
@@ -55,7 +55,7 @@
         }
         .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
 
-        /* 2. 좌측 사이드바 */
+        /* 사이드바 */
         .sidebar {
             width: 280px; background: rgba(13, 17, 23, 0.95); border-right: 1px solid var(--panel-border);
             display: flex; flex-direction: column; padding: 20px; z-index: 100;
@@ -77,7 +77,7 @@
         .btn-safe { background: var(--success); }
         .btn-safe:hover { background: #27ae60; }
 
-        /* 3. 우측 메인 콘텐츠 레이아웃 */
+        /* 레이아웃 */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .top-navbar { height: 70px; background: rgba(13, 17, 23, 0.6); border-bottom: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; backdrop-filter: blur(10px); }
         .top-navbar h1 { font-size: 18px; margin: 0; font-weight: 500; }
@@ -85,7 +85,7 @@
         .view-section { display: none; flex-direction: column; gap: 25px; }
         .view-section.active { display: flex; }
 
-        /* 4. 관제 맵 레이아웃 */
+        /* 관제 맵 */
         .map-section { background: var(--panel-bg); border-radius: 16px; border: 1px solid var(--panel-border); padding: 20px; }
         .section-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         .map-container { width: 100%; height: 420px; background: #010409; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); position: relative; overflow: hidden; }
@@ -95,7 +95,7 @@
         .train-marker.ems { background: var(--danger); box-shadow: 0 0 15px var(--danger); animation: marker-blink 0.6s infinite alternate; }
         .train-marker-label { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.9); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; white-space: nowrap; border: 1px solid var(--primary); pointer-events: none; }
 
-        /* 5. 열차 현황 카드 대시보드 */
+        /* 열차 현황 카드 대시보드 */
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 25px; }
         .train-card { background: linear-gradient(180deg, rgba(25, 27, 48, 0.9), rgba(18, 20, 36, 0.9)); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 24px; backdrop-filter: blur(15px); display: flex; flex-direction: column; justify-content: space-between; transition: 0.3s; }
         .train-card:hover { border-color: var(--primary); box-shadow: 0 0 20px rgba(88, 166, 255, 0.15); transform: translateY(-3px); }
@@ -120,7 +120,10 @@
         .status-normal { background: rgba(46, 204, 113, 0.15); color: var(--success); border: 1px solid var(--success); }
         .status-ems { background: rgba(255, 77, 109, 0.15); color: var(--danger); border: 1px solid var(--danger); animation: card-blink 1s infinite alternate; }
 
-        /* 6. 계정 관리 및 로그 스타일 */
+        /* 비상정지 사유 박스 스타일 추가 */
+        .v-reason-row { display: none; align-items: center; justify-content: space-between; background: rgba(255, 77, 109, 0.15); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255, 77, 109, 0.4); margin-bottom: 12px; animation: card-blink 1.5s infinite alternate; }
+
+        /* 계정 관리 및 로그 */
         .card-table-wrap { background: var(--panel-bg); border-radius: 16px; border: 1px solid var(--panel-border); padding: 24px; }
         .admin-flex { display: flex; gap: 30px; align-items: flex-start; }
         .admin-form { width: 320px; background: rgba(0, 0, 0, 0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
@@ -196,26 +199,18 @@
 
             <div id="view-accounts" class="view-section">
                 <div class="card-table-wrap">
-                    <div class="section-title" id="admin-form-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
+                    <div class="section-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
                     <div class="admin-flex">
                         <div class="admin-form">
-                            <div class="form-group"><label>관제원 ID</label><input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정"></div>
-                            <div class="form-group"><label>비밀번호</label><input type="password" id="new-user-pw" class="form-control" placeholder="비밀번호 지정"></div>
+                            <div class="form-group"><label>신규 관제원 ID</label><input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정"></div>
+                            <div class="form-group"><label>초기 비밀번호</label><input type="password" id="new-user-pw" class="form-control" placeholder="비밀번호 지정"></div>
                             <div class="form-group"><label>연동할 로블록스 UserID</label><input type="number" id="new-user-rbx" class="form-control" value="1"></div>
-                            <div class="form-group">
-                                <label>권한 레벨</label>
-                                <select id="new-user-role" class="form-control" style="background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15);">
-                                    <option value="일반 관제원">일반 관제원</option>
-                                    <option value="최고 관리자">최고 관리자</option>
-                                </select>
-                            </div>
-                            <button id="account-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="createNewAccount()">계정 생성 및 발급</button>
-                            <button id="account-cancel-btn" class="btn btn-danger" style="width: 100%; margin-top: 6px; display: none;" onclick="cancelEditMode()">수정 모드 취소</button>
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="createNewAccount()">계정 생성 및 발급</button>
                         </div>
                         <div style="flex: 1;">
                             <table class="custom-table">
                                 <thead>
-                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th><th>계정 제어</th></tr>
+                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th></tr>
                                 </thead>
                                 <tbody id="account-table-body"></tbody>
                             </table>
@@ -236,12 +231,8 @@
     <script>
         let accountDB = [];
         let currentUserSession = null;
-        let lastRenderedLogCount = 0; // 로그 중복 렌더링 방지
+        let lastRenderedLogCount = 0; 
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
-
-        // 계정 수정 제어용 로컬 변수
-        let isEditMode = false;
-        let editTargetId = "";
 
         window.onload = async () => {
             await fetchAccounts();
@@ -280,7 +271,6 @@
                 document.getElementById('session-username').innerText = currentUserSession.id;
                 document.getElementById('session-role').innerText = currentUserSession.role;
                 
-                // 프록시 API를 통해 아바타 호출
                 document.getElementById('my-avatar').src = `/api/avatar/${currentUserSession.rbxId}`;
 
                 if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자") {
@@ -288,7 +278,6 @@
                 } else {
                     document.getElementById('menu-accounts').style.display = 'flex';
                 }
-                renderAccounts(); // 로그인 정보 연동 완료 시 테이블 작업 버튼 재렌더링
             } else {
                 alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
             }
@@ -299,121 +288,35 @@
             document.getElementById('login-id').value = "";
             document.getElementById('login-pw').value = "";
             document.getElementById('auth-overlay').style.display = 'flex';
-            cancelEditMode();
             switchView('dashboard', document.querySelector('.menu-item'));
         }
 
-        // [기능 추가] 생성 버튼 하나로 등록/수정 동시 처리 전환
         async function createNewAccount() {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 관리할 권한이 없습니다.");
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 생성할 권한이 없습니다.");
             
-            const userId = document.getElementById('new-user-id').value.trim();
-            const userPw = document.getElementById('new-user-pw').value.trim();
-            const userRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
-            const userRole = document.getElementById('new-user-role').value;
+            const newId = document.getElementById('new-user-id').value.trim();
+            const newPw = document.getElementById('new-user-pw').value.trim();
+            const newRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
 
-            if (!userId || !userPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
-
-            if (isEditMode) {
-                // [수정 모드 로직 수행]
-                try {
-                    const res = await fetch(`/api/accounts/${editTargetId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ pw: userPw, rbxId: userRbx, role: userRole, adminId: currentUserSession.id })
-                    });
-                    const data = await res.json();
-                    if (data.error) alert(data.error);
-                    else {
-                        alert(`계정 [${editTargetId}]의 정보 수정을 완료했습니다.`);
-                        cancelEditMode();
-                        await fetchAccounts();
-                    }
-                } catch (e) {
-                    console.error("계정 수정 중 네트워크 통신 오류", e);
-                }
-            } else {
-                // [신규 생성 모드 로직 수행]
-                try {
-                    const res = await fetch('/api/accounts', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: userId, pw: userPw, rbxId: userRbx, role: userRole, adminId: currentUserSession.id })
-                    });
-
-                    const data = await res.json();
-                    if (data.error) alert(data.error);
-                    else {
-                        alert(`신규 관제원 계정 [${userId}]이 정상 발급되었습니다.`);
-                        cancelEditMode();
-                        await fetchAccounts();
-                    }
-                } catch (e) {
-                    console.error("계정 생성 오류", e);
-                }
-            }
-        }
-
-        // [기능 추가] 특정 계정 정보를 입력 박스에 바인딩하고 수정 모드로 전환
-        function startEditAccount(id, pw, rbxId, role) {
-            isEditMode = true;
-            editTargetId = id;
-
-            document.getElementById('admin-form-title').innerHTML = `<i class="fa-solid fa-user-gear"></i> 관제 계정 정보 대폭 수정 시스템`;
-            
-            const idInput = document.getElementById('new-user-id');
-            idInput.value = id;
-            idInput.disabled = true; // 아이디(고유 키)는 수정 불가 잠금
-
-            document.getElementById('new-user-pw').value = pw;
-            document.getElementById('new-user-rbx').value = rbxId;
-            document.getElementById('new-user-role').value = role;
-
-            document.getElementById('account-submit-btn').innerText = "기록 수정 적용하기";
-            document.getElementById('account-cancel-btn').style.display = "block";
-        }
-
-        // [기능 추가] 수정 취소 후 원래 등록 폼으로 클리어
-        function cancelEditMode() {
-            isEditMode = false;
-            editTargetId = "";
-
-            document.getElementById('admin-form-title').innerHTML = `<i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템`;
-            
-            const idInput = document.getElementById('new-user-id');
-            idInput.value = "";
-            idInput.disabled = false;
-
-            document.getElementById('new-user-pw').value = "";
-            document.getElementById('new-user-rbx').value = "1";
-            document.getElementById('new-user-role').value = "일반 관제원";
-
-            document.getElementById('account-submit-btn').innerText = "계정 생성 및 발급";
-            document.getElementById('account-cancel-btn').style.display = "none";
-        }
-
-        // [기능 추가] 계정 영구 삭제 통신 함수
-        async function deleteAccount(id) {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 삭제할 권한이 없습니다.");
-            if (id === "lsrhjru") return alert("마스터 최고 관리자 계정은 삭제할 수 없습니다!");
-            
-            if (!confirm(`정말로 관제원 계정 [${id}]을 시스템 데이터베이스에서 영구 삭제하시겠습니까?`)) return;
+            if (!newId || !newPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
 
             try {
-                const res = await fetch(`/api/accounts/${id}`, {
-                    method: 'DELETE',
+                const res = await fetch('/api/accounts', {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ adminId: currentUserSession.id })
+                    body: JSON.stringify({ id: newId, pw: newPw, rbxId: newRbx, role: "일반 관제원", adminId: currentUserSession.id })
                 });
+
                 const data = await res.json();
                 if (data.error) alert(data.error);
                 else {
-                    alert(`계정 [${id}] 삭제 처리가 정상 승인되었습니다.`);
-                    if (editTargetId === id) cancelEditMode();
+                    alert(`계정 [${newId}]이 발급되었습니다.`);
+                    document.getElementById('new-user-id').value = "";
+                    document.getElementById('new-user-pw').value = "";
                     await fetchAccounts();
                 }
             } catch (e) {
-                console.error("계정 삭제 삭제 처리 중 에러 발생", e);
+                console.error("계정 생성 오류", e);
             }
         }
 
@@ -422,39 +325,24 @@
             tbody.innerHTML = "";
             accountDB.forEach(u => {
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
-                const isRoot = (u.id === 'lsrhjru');
                 const tr = document.createElement('tr');
-
-                // 최고 관리자 계정 로그인 상태일 때만 수정/삭제 액션 버튼 부여
-                let actionTemplate = `<span style="color:var(--text-muted); font-size:12px;">권한 없음</span>`;
-                if (currentUserSession && (currentUserSession.role === '최고 관리자' || currentUserSession.id === 'lsrhjru')) {
-                    actionTemplate = `
-                        <button class="btn btn-primary" style="padding: 4px 10px; font-size:11px; display:inline-block; margin-right:4px;" onclick="startEditAccount('${u.id}', '${u.pw}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
-                        ${isRoot ? '' : `<button class="btn btn-danger" style="padding: 4px 10px; font-size:11px; display:inline-block; box-shadow:none;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash-can"></i> 삭제</button>`}
-                    `;
-                }
-
                 tr.innerHTML = `
                     <td><img src="/api/avatar/${u.rbxId}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
-                    <td>${actionTemplate}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // 서버에서 전달된 로그 렌더링
         function renderLogs(logs) {
             if (!logs || logs.length === 0) return;
-            
-            // 새 로그가 없으면 렌더링 건너뛰기
             if (logs.length === lastRenderedLogCount) return;
 
             const container = document.getElementById('log-display-container');
-            container.innerHTML = ""; // 전체 다시 그리기
+            container.innerHTML = ""; 
             
             logs.forEach(log => {
                 const logLine = document.createElement('div');
@@ -474,10 +362,9 @@
                 const res = await fetch('/api/current-data');
                 const data = await res.json();
                 
-                const trains = data.trains || {};
+                const trains = data.trains || data; 
                 const logs = data.logs || [];
                 
-                // 로그 화면 갱신
                 renderLogs(logs);
 
                 const grid = document.getElementById('dashboard-grid');
@@ -494,7 +381,6 @@
 
                 if (noTrainsMsg) noTrainsMsg.remove();
 
-                // 디스폰 열차 클리어
                 document.querySelectorAll('.train-card').forEach(card => {
                     if (!trains[card.dataset.id]) card.remove();
                 });
@@ -524,7 +410,7 @@
                     let pctZ = ((train.PositionZ - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
                     marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;
                     marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
-                    marker.querySelector('.train-marker-label').innerText = `${train.TrainName.split(' ')[0]} (${train.CurrentSpeed}km/h)`;
+                    marker.querySelector('.train-marker-label').innerText = `${(train.TrainName || "").split(' ')[0]} (${train.CurrentSpeed}km/h)`;
 
                     let card = document.querySelector(`.train-card[data-id="${id}"]`);
                     if (!card) {
@@ -541,6 +427,7 @@
                                 <div class="info-row"><span class="info-label">제어 단수</span><span class="info-value v-notch">N</span></div>
                                 <div class="info-row"><span class="info-label">역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
                                 <div class="info-row"><span class="info-label">현재 좌표 (X, Z)</span><span class="info-value v-pos" style="color:var(--text-muted);">0, 0</span></div>
+                                
                                 <div class="limit-input-zone">
                                     <span style="font-size:13px; font-weight:500;">ATC 제한속도 변경</span>
                                     <div>
@@ -548,9 +435,16 @@
                                         <button class="btn-sm btn btn-primary" style="padding:6px 10px; display:inline-block;" onclick="setSpeedLimit('${id}', this)"><i class="fa-solid fa-check"></i></button>
                                     </div>
                                 </div>
+                                
                                 <div class="info-row" style="align-items:center; margin-top:15px;">
                                     <span class="info-label">안전 상태</span>
                                     <span class="status-badge v-badge">정상</span>
+                                </div>
+
+                                <!-- 비상정지 사유 박스 -->
+                                <div class="v-reason-row">
+                                    <span style="color: var(--danger); font-weight: bold; font-size: 13px;"><i class="fa-solid fa-triangle-exclamation"></i> 정차 사유</span>
+                                    <span class="v-reason" style="color: #fff; font-weight: bold; font-size: 13px;">-</span>
                                 </div>
                             </div>
                             <div>
@@ -586,19 +480,38 @@
 
                     const limitInput = card.querySelector('.limit-input');
                     if (document.activeElement !== limitInput) {
-                        limitInput.value = train.SpeedLimit || 30; 
+                        limitInput.value = train.SpeedLimit || 30;
                     }
 
                     const badge = card.querySelector('.v-badge');
+                    const reasonRow = card.querySelector('.v-reason-row');
+                    const reasonText = card.querySelector('.v-reason');
+
+                    // 비상 정차 및 사유 렌더링 로직
                     if (train.remoteEmergencyActive) {
                         badge.className = "status-badge status-ems";
                         badge.innerText = "원격 강제 제동";
+                        
+                        reasonRow.style.display = "flex";
+                        reasonText.innerText = "관제실 원격 강제 개입";
                     } else if (train.IsEmergency) {
                         badge.className = "status-badge status-ems";
-                        badge.innerText = "과속/비상 체결";
+                        badge.innerText = "비상 체결됨";
+                        
+                        reasonRow.style.display = "flex";
+                        
+                        // Lua에서 보내준 구체적 사유 (EmergencyReason) 매핑
+                        if (train.EmergencyReason === "Overspeed") {
+                            reasonText.innerText = "제한속도 초과 (과속)";
+                        } else if (train.EmergencyReason === "Vigilance") {
+                            reasonText.innerText = "경계장치 미확인";
+                        } else {
+                            reasonText.innerText = train.EmergencyReason || "자동 비상 체결 (과속 또는 경계)";
+                        }
                     } else {
                         badge.className = "status-badge status-normal";
                         badge.innerText = "정상 신호 운영";
+                        reasonRow.style.display = "none"; // 정상일 땐 사유 박스 숨김
                     }
 
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
@@ -606,8 +519,7 @@
                     if(card.querySelector('.v-avatar').getAttribute('src') !== driverImgSrc) {
                         card.querySelector('.v-avatar').src = driverImgSrc;
                     }
-                    // 로블록스 닉네임(DisplayName)과 계정명(Name)을 대시보드상에 직관적으로 표출
-                    card.querySelector('.v-driver').innerText = train.DriverDisplayName ? `${train.DriverDisplayName} (@${train.DriverName})` : (train.DriverName || '승무원 없음');
+                    card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
                 }
             } catch (e) {
                 console.error("대시보드 동기화 오류...", e);
