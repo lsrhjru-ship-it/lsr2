@@ -119,15 +119,21 @@ app.post('/api/train-status', (req, res) => {
     });
 });
 
-// [API] 대시보드 데이터 전송
+// server.js의 [API] 대시보드 데이터 전송 부분을 아래와 같이 수정
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
+    let activeTrains = {}; // 응답용 임시 객체
+    
     for (const id in trains) {
-        if (now - trains[id].lastSeen > 30000) {
+        // 30초 이상 신호 없으면 삭제하되, 바로 응답에서 빼지 말고 
+        // 전체 상태를 유지하다가 정리함
+        if (now - trains[id].lastSeen < 30000) {
+            activeTrains[id] = trains[id];
+        } else {
             delete trains[id];
         }
     }
-    res.json(trains);
+    res.json(activeTrains); 
 });
 
 app.post('/api/train-status', (req, res) => {
