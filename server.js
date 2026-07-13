@@ -15,7 +15,7 @@ if (fs.existsSync(DB_PATH)) {
     accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 } else {
     accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "최고 관리자" } // UI와 일치하도록 '최고 관리자'로 수정
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 4548323500, role: "최고 관리자" } // UI와 일치하도록 '최고 관리자'로 수정
     ];
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
