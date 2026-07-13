@@ -15,7 +15,7 @@ if (fs.existsSync(DB_PATH)) {
     accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 } else {
     accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "최고 관리자" }
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "admin" }
     ];
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
@@ -41,25 +41,6 @@ app.post('/api/accounts', (req, res) => {
     accounts.push({ id, pw, rbxId, role: role || "일반 관제원" });
     saveAccounts();
     res.json({ success: true });
-});
-
-// 🔥 [API] 관제원 계정 삭제 (추가된 부분)
-app.delete('/api/accounts/:id', (req, res) => {
-    const targetId = req.params.id;
-
-    // 최고 관리자 계정은 삭제 불가능하도록 보호
-    if (targetId === "lsrhjru") {
-        return res.status(400).json({ error: "최고 관리자 계정은 삭제할 수 없습니다." });
-    }
-
-    const index = accounts.findIndex(a => a.id === targetId);
-    if (index !== -1) {
-        accounts.splice(index, 1);
-        saveAccounts();
-        res.json({ success: true });
-    } else {
-        res.status(404).json({ error: "존재하지 않는 계정입니다." });
-    }
 });
 
 // [API] 열차 상태 수신
