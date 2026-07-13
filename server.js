@@ -43,6 +43,42 @@ app.post('/api/accounts', (req, res) => {
     res.json({ success: true });
 });
 
+// [API] 계정 정보 수정 (관리자용)
+app.put('/api/accounts/:id', (req, res) => {
+    const { id } = req.params;
+    const { pw, rbxId, role } = req.body;
+    
+    const account = accounts.find(a => a.id === id);
+    if (!account) {
+        return res.status(404).json({ error: "해당 계정을 찾을 수 없습니다." });
+    }
+
+    if (pw !== undefined && pw.trim() !== "") account.pw = pw;
+    if (rbxId !== undefined) account.rbxId = Number(rbxId);
+    if (role !== undefined) account.role = role;
+
+    saveAccounts();
+    res.json({ success: true });
+});
+
+// [API] 계정 삭제 (관리자용)
+app.delete('/api/accounts/:id', (req, res) => {
+    const { id } = req.params;
+
+    if (id === 'lsrhjru') {
+        return res.status(400).json({ error: "최고 관리자 본인 계정은 삭제할 수 없습니다." });
+    }
+
+    const index = accounts.findIndex(a => a.id === id);
+    if (index === -1) {
+        return res.status(404).json({ error: "해당 계정을 찾을 수 없습니다." });
+    }
+
+    accounts.splice(index, 1);
+    saveAccounts();
+    res.json({ success: true });
+});
+
 // [API] 열차 상태 수신
 app.post('/api/train-status', (req, res) => {
     const { TrainId } = req.body;
