@@ -49,7 +49,52 @@ app.post('/api/accounts', (req, res) => {
     }
     accounts.push({ id, pw, rbxId, role: role || "일반 관제원" });
     saveAccounts();
-    addServerLog(adminId || "System", `하위 관제원 계정 신규 발급 완료 (ID: ${id})`);
+    addServerLog(adminId || "System", `하위 관제원 계정 신규 발급 완료 (ID: ${id}, 권한: ${role || "일반 관제원"})`);
+    res.json({ success: true });
+});
+
+// [API] 관제원 계정 정보 수정 (신규 추가)
+app.put('/api/accounts/:id', (req, res) => {
+    const targetId = req.params.id;
+    const { pw, rbxId, role, adminId } = req.body;
+
+    const account = accounts.find(a => a.id === targetId);
+    if (!account) {
+        return res.status(404).json({ error: "계정을 찾을 수 없습니다." });
+    }
+
+    // 안전 장치: 마스터 최고 관리자 계정의 권한 하향 방지
+    if (targetId === "lsrhjru" && role && role !== "최고 관리자") {
+        return res.status(400).json({ error: "시스템 마스터 최고 관리자의 권한은 변경할 수 없습니다." });
+    }
+
+    if (pw) account.pw = pw;
+    if (rbxId !== undefined) account.rbxId = Number(rbxId);
+    if (role) account.role = role;
+
+    saveAccounts();
+    addServerLog(adminId || "System", `관제원 계정 정보 수정 완료 (ID: ${targetId}, 변경권한: ${account.role})`);
+    res.json({ success: true });
+});
+
+// [API] 관제원 계정 삭제 (신규 추가)
+app.delete('/api/accounts/:id', (req, res) => {
+    const targetId = req.params.id;
+    const { adminId } = req.body;
+
+    // 안전 장치: 마스터 계정 자체 삭제 불가능
+    if (targetId === "lsrhjru") {
+        return res.status(400).json({ error: "시스템 마스터 최고 관리자 계정은 삭제할 수 없습니다." });
+    }
+
+    const index = accounts.findIndex(a => a.id === targetId);
+    if (index === -1) {
+        return res.status(404).json({ error: "계정을 찾을 수 없습니다." });
+    }
+
+    accounts.splice(index, 1);
+    saveAccounts();
+    addServerLog(adminId || "System", `🔴 관제원 계정 영구 삭제 처리 완료 (ID: ${targetId})`);
     res.json({ success: true });
 });
 
@@ -85,7 +130,6 @@ app.post('/api/train-status', (req, res) => {
     }
 
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
-    // 기본 제한속도를 웹과 스크립트 모두 동일하게 30으로 맞춤
     const currentSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 30; 
 
     trains[TrainId] = {
@@ -105,12 +149,15 @@ app.post('/api/train-status', (req, res) => {
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
     for (const id in trains) {
-        if (now - trains[id].lastSeen > 30000) { 
+        if (now - trains[id].lastSeen > 15000) { 
             delete trains[id];
         }
     }
-    // 기차 데이터와 함께 전체 시스템 로그도 웹으로 보내줌
-    res.json({ trains: trains, logs: systemLogs });
+    res.json({ 
+        trains: trains, 
+        trainList: Object.values(trains), 
+        logs: systemLogs 
+    });
 });
 
 // [API] 제한 속도 변경 명령
