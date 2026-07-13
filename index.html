@@ -10,7 +10,7 @@
 
     <style>
         :root {
-            --bg-color: #05060f; /* 더 깊고 세련된 블랙 */
+            --bg-color: #05060f; 
             --panel-bg: rgba(18, 20, 36, 0.7);
             --panel-border: rgba(88, 166, 255, 0.15);
             --primary: #58a6ff;
@@ -40,7 +40,7 @@
                 radial-gradient(circle at 85% 30%, rgba(0, 242, 254, 0.04), transparent 30%);
         }
 
-        /* 인증 레이어 (로그인 화면) */
+        /* 1. 로그인 인증 레이어 */
         #auth-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -98,7 +98,7 @@
             box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
 
-        /* 사이드바 */
+        /* 2. 좌측 사이드바 */
         .sidebar {
             width: 280px;
             background: rgba(13, 17, 23, 0.95);
@@ -136,7 +136,7 @@
             border-radius: 50%;
             background: #151622;
             border: 2px solid var(--primary);
-            object-fit: cover;
+            object-fit: cover; /* 아바타 비율 깨짐 방지 */
         }
 
         .user-info .u-name { font-weight: bold; font-size: 14px; }
@@ -161,7 +161,21 @@
             border-left: 4px solid var(--primary);
         }
 
-        /* 메인 콘텐츠 레이아웃 */
+        /* 공통 버튼 디자인 (거대해지는 버그 수정) */
+        .btn {
+            padding: 12px; font-size: 13px; font-weight: 700;
+            border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+            color: white; display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+
+        .btn-primary { background: var(--primary); color: #000; }
+        .btn-primary:hover { background: #6cb3ff; }
+        .btn-danger { background: var(--danger); box-shadow: 0 4px 12px rgba(255, 77, 109, 0.2); }
+        .btn-danger:hover { background: #e0435f; }
+        .btn-safe { background: var(--success); }
+        .btn-safe:hover { background: #27ae60; }
+
+        /* 3. 우측 메인 콘텐츠 레이아웃 */
         .main-wrapper {
             flex: 1;
             display: flex;
@@ -180,4 +194,600 @@
             backdrop-filter: blur(10px);
         }
 
-        .top
+        .top-navbar h1 { font-size: 18px; margin: 0; font-weight: 500; }
+
+        .content-body {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .view-section {
+            display: none;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .view-section.active { display: flex; }
+
+        /* 4. 관제 맵 레이아웃 */
+        .map-section {
+            background: var(--panel-bg);
+            border-radius: 16px;
+            border: 1px solid var(--panel-border);
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 15px; font-weight: 700; color: #fff;
+            margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
+        }
+
+        .map-container {
+            width: 100%; height: 420px;
+            background: #010409;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-container::before {
+            content: ''; position: absolute; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(88, 166, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(88, 166, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .train-marker {
+            position: absolute;
+            width: 16px; height: 16px;
+            background: var(--accent);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: left 0.2s ease, top 0.2s ease;
+            box-shadow: 0 0 12px var(--accent);
+            z-index: 10;
+        }
+
+        .train-marker.ems {
+            background: var(--danger);
+            box-shadow: 0 0 15px var(--danger);
+            animation: marker-blink 0.6s infinite alternate;
+        }
+
+        .train-marker-label {
+            position: absolute; top: -26px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff; padding: 4px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: bold; white-space: nowrap;
+            border: 1px solid var(--primary); pointer-events: none;
+        }
+
+        /* 5. 열차 현황 카드 대시보드 */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 25px;
+        }
+
+        .train-card {
+            background: linear-gradient(180deg, rgba(25, 27, 48, 0.9), rgba(18, 20, 36, 0.9));
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            backdrop-filter: blur(15px);
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: 0.3s;
+        }
+
+        .train-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.15);
+            transform: translateY(-3px);
+        }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px; margin-bottom: 16px;
+        }
+
+        .v-name { font-size: 17px; font-weight: 700; color: #fff; }
+        .train-id { font-size: 11px; color: var(--text-muted); font-family: 'Orbitron', sans-serif; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+        .info-label { color: var(--text-muted); }
+        .info-value { font-weight: 700; color: var(--accent); }
+
+        .limit-input-zone {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0, 0, 0, 0.2); padding: 10px 14px;
+            border-radius: 8px; margin: 15px 0; border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .limit-input {
+            width: 65px; background: #010409; border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff; padding: 6px; border-radius: 6px; text-align: center; font-weight: bold;
+        }
+
+        .limit-input:focus { outline: none; border-color: var(--primary); }
+
+        .driver-zone {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255, 255, 255, 0.02); padding: 12px;
+            border-radius: 10px; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .avatar { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--primary); background: #000; object-fit: cover; }
+        .driver-meta { display: flex; flex-direction: column; }
+        .driver-name { font-weight: 700; font-size: 14px; }
+
+        .control-zone { display: flex; gap: 12px; }
+        .control-zone .btn { flex: 1; } /* 컨트롤 영역 내부 버튼만 가로를 꽉 채우도록 설정 */
+
+        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+        .status-normal { background: rgba(46, 204, 113, 0.15); color: var(--success); border: 1px solid var(--success); }
+        .status-ems { background: rgba(255, 77, 109, 0.15); color: var(--danger); border: 1px solid var(--danger); animation: card-blink 1s infinite alternate; }
+
+        /* 6. 계정 관리 및 로그 스타일 */
+        .card-table-wrap {
+            background: var(--panel-bg); border-radius: 16px;
+            border: 1px solid var(--panel-border); padding: 24px;
+        }
+
+        .admin-flex { display: flex; gap: 30px; align-items: flex-start; }
+        .admin-form { width: 320px; background: rgba(0, 0, 0, 0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
+
+        .custom-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
+        .custom-table th, .custom-table td { padding: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+        .custom-table th { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+
+        .log-box {
+            background: #010409; border-radius: 12px; padding: 15px;
+            height: 500px; overflow-y: auto; font-family: 'Courier New', monospace;
+            font-size: 13px; line-height: 1.6; border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-line { margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); padding-bottom: 4px; }
+        .log-time { color: var(--primary); margin-right: 10px; }
+        .log-user { color: var(--accent); font-weight: bold; margin-right: 6px; }
+
+        .no-trains { text-align: center; color: var(--text-muted); font-size: 15px; padding: 60px 0; width: 100%; grid-column: 1 / -1; }
+
+        @keyframes card-blink { 0% { box-shadow: 0 0 4px var(--danger-glow); } 100% { box-shadow: 0 0 16px var(--danger-glow); } }
+        @keyframes marker-blink { 0% { transform: translate(-50%, -50%) scale(0.9); } 100% { transform: translate(-50%, -50%) scale(1.2); } }
+    </style>
+</head>
+
+<body>
+
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <h2>TCMS LOGIN</h2>
+            <div class="form-group">
+                <label><i class="fa-solid fa-user"></i> 관리자 아이디</label>
+                <input type="text" id="login-id" class="form-control" placeholder="ID를 입력하세요">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-lock"></i> 비밀번호</label>
+                <input type="password" id="login-pw" class="form-control" placeholder="Password를 입력하세요" onkeyup="if(event.key==='Enter') handleLogin()">
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="handleLogin()">시스템 접속</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-circle-nodes"></i> NEXT-TCMS
+        </div>
+
+        <div class="user-profile-box">
+            <img id="my-avatar" src="" alt="Avatar">
+            <div class="user-info">
+                <div class="u-name" id="session-username">대기 중</div>
+                <div class="u-role" id="session-role">-</div>
+            </div>
+        </div>
+
+        <div class="menu-item active" onclick="switchView('dashboard', this)">
+            <i class="fa-solid fa-chart-line"></i> 실시간 통합 관제
+        </div>
+        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)">
+            <i class="fa-solid fa-users-gear"></i> 계정 및 권한 관리
+        </div>
+        <div class="menu-item" onclick="switchView('logs', this)">
+            <i class="fa-solid fa-file-shield"></i> 시스템 감사 로그
+        </div>
+
+        <button class="btn btn-danger" style="margin-top: auto; padding: 12px; width: 100%;" onclick="handleLogout()">
+            <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+        </button>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="top-navbar">
+            <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
+            <div>
+                <span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM LIVE</span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <div id="view-dashboard" class="view-section active">
+                <div class="map-section">
+                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map</div>
+                    <div class="map-container" id="live-map"></div>
+                </div>
+                <div class="grid-container" id="dashboard-grid">
+                    <div class="no-trains" id="no-trains-msg">네트워크 연결 대기 중이거나 운행 중인 열차가 없습니다.</div>
+                </div>
+            </div>
+
+            <div id="view-accounts" class="view-section">
+                <div class="card-table-wrap">
+                    <div class="section-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
+                    <div class="admin-flex">
+                        <div class="admin-form">
+                            <div class="form-group">
+                                <label>신규 관제원 ID</label>
+                                <input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정">
+                            </div>
+                            <div class="form-group">
+                                <label>초기 비밀번호</label>
+                                <input type="password" id="new-user-pw" class="form-control" placeholder="비밀번호 지정">
+                            </div>
+                            <div class="form-group">
+                                <label>연동할 로블록스 UserID</label>
+                                <input type="number" id="new-user-rbx" class="form-control" value="1">
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="createNewAccount()">계정 생성 및 발급</button>
+                        </div>
+                        <div style="flex: 1;">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>아바타</th>
+                                        <th>관제원 계정 ID</th>
+                                        <th>연동 로블록스 ID</th>
+                                        <th>권한 레벨</th>
+                                        <th>상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="account-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-logs" class="view-section">
+                <div class="card-table-wrap">
+                    <div class="section-title"><i class="fa-solid fa-terminal"></i> 실시간 관제 통제 및 명령어 감사 로그</div>
+                    <div class="log-box" id="log-display-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accountDB = [];
+        let currentUserSession = null;
+        const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
+
+        window.onload = async () => {
+            await fetchAccounts();
+            addLog("System", "통합 철도 관제 운영 인프라 서버 접속 및 동기화 완료.");
+        };
+
+        // 서버에서 계정 DB 가져오기
+        async function fetchAccounts() {
+            try {
+                const res = await fetch('/api/accounts');
+                accountDB = await res.json();
+                renderAccounts();
+            } catch (e) {
+                console.error("서버에서 계정 목록을 가져오지 못했습니다.", e);
+            }
+        }
+
+        // 메뉴 이동
+        function switchView(viewId, element) {
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            element.classList.add('active');
+
+            const titles = { dashboard: "실시간 기차 통합 대시보드", accounts: "계정 및 시스템 권한 관리", logs: "통합 보안 감사 로그 모니터" };
+            document.getElementById('nav-title').innerText = titles[viewId] || "통합 관제 시스템";
+        }
+
+        // 로그인 처리
+        async function handleLogin() {
+            const inputId = document.getElementById('login-id').value.trim();
+            const inputPw = document.getElementById('login-pw').value.trim();
+
+            await fetchAccounts(); // 로그인 전 최신 DB 반영
+
+            const found = accountDB.find(u => u.id === inputId && u.pw === inputPw);
+            
+            if (found) {
+                currentUserSession = found;
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('session-username').innerText = currentUserSession.id;
+                document.getElementById('session-role').innerText = currentUserSession.role;
+                document.getElementById('my-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${currentUserSession.rbxId}&size=150x150&format=Png&isCircular=true`;
+
+                // 최고 관리자 권한 확인 후 메뉴 보이기/숨기기
+                if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자") {
+                    document.getElementById('menu-accounts').style.display = 'none';
+                } else {
+                    document.getElementById('menu-accounts').style.display = 'flex';
+                }
+
+                addLog("System", `관리자 [${currentUserSession.id}] 관제 센터 세션 로그인 성공.`);
+            } else {
+                alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
+            }
+        }
+
+        // 로그아웃 처리
+        function handleLogout() {
+            currentUserSession = null;
+            document.getElementById('login-id').value = "";
+            document.getElementById('login-pw').value = "";
+            document.getElementById('auth-overlay').style.display = 'flex';
+            
+            // 초기화면으로 메뉴 돌리기
+            switchView('dashboard', document.querySelector('.menu-item'));
+        }
+
+        // 계정 발급 (서버로 전송)
+        async function createNewAccount() {
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) {
+                alert("계정을 생성할 권한이 없습니다.");
+                return;
+            }
+
+            const newId = document.getElementById('new-user-id').value.trim();
+            const newPw = document.getElementById('new-user-pw').value.trim();
+            const newRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
+
+            if (!newId || !newPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
+
+            try {
+                const res = await fetch('/api/accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: newId, pw: newPw, rbxId: newRbx, role: "일반 관제원" })
+                });
+                
+                const data = await res.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(`계정 [${newId}]이 성공적으로 서버에 발급되었습니다.`);
+                    document.getElementById('new-user-id').value = "";
+                    document.getElementById('new-user-pw').value = "";
+                    await fetchAccounts();
+                    addLog(currentUserSession.id, `하위 관제원 계정 신규 발급 완료 (ID: ${newId})`);
+                }
+            } catch(e) {
+                console.error("계정 생성 오류", e);
+            }
+        }
+
+        // 계정 테이블 렌더링
+        function renderAccounts() {
+            const tbody = document.getElementById('account-table-body');
+            tbody.innerHTML = "";
+            accountDB.forEach(u => {
+                const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><img src="https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${u.rbxId}&size=150x150&format=Png&isCircular=true" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
+                    <td style="font-weight:bold;">${u.id}</td>
+                    <td>${u.rbxId}</td>
+                    <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
+                    <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 시스템 로그 기록
+        function addLog(user, message) {
+            const container = document.getElementById('log-display-container');
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line';
+            logLine.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="log-user">@${user}</span> <span style="color:#fff;">${message}</span>`;
+
+            container.appendChild(logLine);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 실시간 대시보드 동기화 
+        async function updateDashboard() {
+            if (!currentUserSession) return;
+
+            try {
+                const res = await fetch('/api/current-data');
+                const trains = await res.json();
+
+                const grid = document.getElementById('dashboard-grid');
+                const map = document.getElementById('live-map');
+                const noTrainsMsg = document.getElementById('no-trains-msg');
+
+                const currentIds = Object.keys(trains);
+
+                if (currentIds.length === 0) {
+                    grid.innerHTML = '<div class="no-trains" id="no-trains-msg">네트워크 연결 대기 중이거나 운행 중인 열차가 없습니다.</div>';
+                    map.innerHTML = '';
+                    return;
+                }
+
+                if (noTrainsMsg) noTrainsMsg.remove();
+
+                // 디스폰 열차 클리어
+                document.querySelectorAll('.train-card').forEach(card => {
+                    if (!trains[card.dataset.id]) card.remove();
+                });
+                document.querySelectorAll('.train-marker').forEach(marker => {
+                    if (!trains[marker.dataset.id]) marker.remove();
+                });
+
+                // 열차 렌더링
+                for (const id in trains) {
+                    const train = trains[id];
+                    const isEms = train.IsEmergency || train.remoteEmergencyActive;
+
+                    // 맵 마커 처리
+                    let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
+                    if (!marker) {
+                        marker = document.createElement('div');
+                        marker.className = 'train-marker';
+                        marker.dataset.id = id;
+                        const label = document.createElement('div');
+                        label.className = 'train-marker-label';
+                        marker.appendChild(label);
+                        map.appendChild(marker);
+                    }
+
+                    if (isEms) marker.classList.add('ems');
+                    else marker.classList.remove('ems');
+
+                    let pctX = ((train.PositionX - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
+                    let pctZ = ((train.PositionZ - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
+                    marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;
+                    marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
+                    marker.querySelector('.train-marker-label').innerText = `${train.TrainName.split(' ')[0]} (${train.CurrentSpeed}km/h)`;
+
+                    // 대시보드 카드 생성
+                    let card = document.querySelector(`.train-card[data-id="${id}"]`);
+                    if (!card) {
+                        card = document.createElement('div');
+                        card.className = 'train-card';
+                        card.dataset.id = id;
+                        card.innerHTML = `
+                            <div>
+                                <div class="card-header">
+                                    <span class="v-name"></span>
+                                    <span class="train-id">ID: ${id}</span>
+                                </div>
+                                <div class="info-row"><span class="info-label">현재 속도</span><span class="info-value v-speed">0 km/h</span></div>
+                                <div class="info-row"><span class="info-label">제어 단수</span><span class="info-value v-notch">N</span></div>
+                                <div class="info-row"><span class="info-label">역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
+                                <div class="info-row"><span class="info-label">현재 좌표 (X, Z)</span><span class="info-value v-pos" style="color:var(--text-muted);">0, 0</span></div>
+                                <div class="limit-input-zone">
+                                    <span style="font-size:13px; font-weight:500;">ATC 제한속도 변경</span>
+                                    <div>
+                                        <input type="number" class="limit-input" value="${train.SpeedLimit || 80}">
+                                        <button class="btn-sm btn btn-primary" style="padding:6px 10px; display:inline-block;" onclick="setSpeedLimit('${id}', this)"><i class="fa-solid fa-check"></i></button>
+                                    </div>
+                                </div>
+                                <div class="info-row" style="align-items:center; margin-top:15px;">
+                                    <span class="info-label">안전 상태</span>
+                                    <span class="status-badge v-badge">정상</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="driver-zone">
+                                    <img class="avatar v-avatar" src="" alt="Driver">
+                                    <div class="driver-meta">
+                                        <span class="driver-name v-driver">대기 중</span>
+                                        <span style="font-size:11px; color:var(--text-muted);">Roblox 기장</span>
+                                    </div>
+                                </div>
+                                <div class="control-zone">
+                                    <button class="btn btn-danger" onclick="triggerEmergency('${id}')"><i class="fa-solid fa-triangle-exclamation"></i> 비상정지</button>
+                                    <button class="btn btn-safe" onclick="resetEmergency('${id}')"><i class="fa-solid fa-lock-open"></i> 해제</button>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    }
+
+                    // 수치 업데이트
+                    card.querySelector('.v-name').innerText = train.TrainName;
+                    card.querySelector('.v-speed').innerText = `${train.CurrentSpeed} km/h (제한: ${train.SpeedLimit || 80} km/h)`;
+
+                    let notchText = "N";
+                    if (train.CurrentNotch > 0) notchText = "P" + train.CurrentNotch;
+                    else if (train.CurrentNotch < 0) notchText = (train.CurrentNotch === -5) ? "EB (비상)" : "B" + Math.abs(train.CurrentNotch);
+                    card.querySelector('.v-notch').innerText = notchText;
+
+                    let revText = "중립 (N)";
+                    if (train.CurrentReverser === 1) revText = "전진 (F)";
+                    else if (train.CurrentReverser === -1) revText = "후진 (B)";
+                    card.querySelector('.v-rev').innerText = revText;
+                    card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
+                    
+                    const limitInput = card.querySelector('.limit-input');
+                    if (document.activeElement !== limitInput) {
+                        limitInput.value = train.SpeedLimit || 80;
+                    }
+
+                    const badge = card.querySelector('.v-badge');
+                    if (train.remoteEmergencyActive) {
+                        badge.className = "status-badge status-ems";
+                        badge.innerText = "원격 강제 제동";
+                    } else if (train.IsEmergency) {
+                        badge.className = "status-badge status-ems";
+                        badge.innerText = "과속/비상 체결";
+                    } else {
+                        badge.className = "status-badge status-normal";
+                        badge.innerText = "정상 신호 운영";
+                    }
+
+                    const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
+                    card.querySelector('.v-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${targetUserId}&size=150x150&format=Png&isCircular=true`;
+                    card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
+                }
+            } catch (e) {
+                console.error("대시보드 동기화 오류...", e);
+            }
+        }
+
+        // 컨트롤 API 호출
+        async function setSpeedLimit(trainId, buttonObj) {
+            const inputVal = parseInt(buttonObj.previousElementSibling.value);
+            if (isNaN(inputVal) || inputVal < 0) return alert("올바른 속도를 입력하세요.");
+
+            await fetch('/api/web-speedlimit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId, speedLimit: inputVal })
+            });
+            addLog(currentUserSession.id, `열차 [${trainId}] ATC 제한속도를 ${inputVal}km/h로 수정 지시.`);
+        }
+
+        async function triggerEmergency(trainId) {
+            await fetch('/api/web-emergency', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId })
+            });
+            addLog(currentUserSession.id, `⚠️ 열차 [${trainId}] 원격 비상 정지(EMS) 강제 발령!`);
+        }
+
+        async function resetEmergency(trainId) {
+            await fetch('/api/web-reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId })
+            });
+            addLog(currentUserSession.id, `✅ 열차 [${trainId}] 원격 비상 상태 해제 전송.`);
+        }
+
+        setInterval(updateDashboard, 1000);
+
+    </script>
+</body>
+</html>
