@@ -15,7 +15,7 @@ if (fs.existsSync(DB_PATH)) {
     accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 } else {
     accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "admin" }
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "최고 관리자" } // UI와 일치하도록 '최고 관리자'로 수정
     ];
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
@@ -25,6 +25,24 @@ const saveAccounts = () => fs.writeFileSync(DB_PATH, JSON.stringify(accounts, nu
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// 📌 [API 추가] 로블록스 아바타 이미지 프록시 중계기
+app.get('/api/avatar/:rbxId', async (req, res) => {
+    const rbxId = req.params.rbxId || 1;
+    try {
+        // 로블록스 공식 유저 헤드샷 썸네일 API 호출
+        const response = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshots?userIds=${rbxId}&size=150x150&format=Png&isCircular=true`);
+        const data = await response.json();
+        
+        if (data && data.data && data.data[0] && data.data[0].imageUrl) {
+            // 가져온 실제 이미지 URL 주소로 리다이렉트 처리
+            return res.redirect(data.data[0].imageUrl);
+        }
+        res.redirect('https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg');
+    } catch (e) {
+        res.redirect('https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg');
+    }
 });
 
 // [API] 전체 계정 목록 조회
@@ -41,6 +59,25 @@ app.post('/api/accounts', (req, res) => {
     accounts.push({ id, pw, rbxId, role: role || "일반 관제원" });
     saveAccounts();
     res.json({ success: true });
+});
+
+// 📌 [API 추가] 관제원 계정 원격 삭제 기능
+app.delete('/api/accounts/:id', (req, res) => {
+    const targetId = req.params.id;
+
+    // 시스템 마스터 계정 폭파 방지 안전장치
+    if (targetId === "lsrhjru") {
+        return res.status(400).json({ error: "최고 관리자 본인 계정은 시스템에서 삭제할 수 없습니다." });
+    }
+
+    const index = accounts.findIndex(a => a.id === targetId);
+    if (index !== -1) {
+        accounts.splice(index, 1);
+        saveAccounts();
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: "존재하지 않는 계정입니다." });
+    }
 });
 
 // [API] 열차 상태 수신
