@@ -196,18 +196,26 @@
 
             <div id="view-accounts" class="view-section">
                 <div class="card-table-wrap">
-                    <div class="section-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
+                    <div class="section-title" id="admin-form-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
                     <div class="admin-flex">
                         <div class="admin-form">
-                            <div class="form-group"><label>신규 관제원 ID</label><input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정"></div>
-                            <div class="form-group"><label>초기 비밀번호</label><input type="password" id="new-user-pw" class="form-control" placeholder="비밀번호 지정"></div>
+                            <div class="form-group"><label>관제원 ID</label><input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정"></div>
+                            <div class="form-group"><label>비밀번호</label><input type="password" id="new-user-pw" class="form-control" placeholder="비밀번호 지정"></div>
                             <div class="form-group"><label>연동할 로블록스 UserID</label><input type="number" id="new-user-rbx" class="form-control" value="1"></div>
-                            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="createNewAccount()">계정 생성 및 발급</button>
+                            <div class="form-group">
+                                <label>권한 레벨</label>
+                                <select id="new-user-role" class="form-control" style="background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <option value="일반 관제원">일반 관제원</option>
+                                    <option value="최고 관리자">최고 관리자</option>
+                                </select>
+                            </div>
+                            <button id="account-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="createNewAccount()">계정 생성 및 발급</button>
+                            <button id="account-cancel-btn" class="btn btn-danger" style="width: 100%; margin-top: 6px; display: none;" onclick="cancelEditMode()">수정 모드 취소</button>
                         </div>
                         <div style="flex: 1;">
                             <table class="custom-table">
                                 <thead>
-                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th></tr>
+                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th><th>계정 제어</th></tr>
                                 </thead>
                                 <tbody id="account-table-body"></tbody>
                             </table>
@@ -230,6 +238,10 @@
         let currentUserSession = null;
         let lastRenderedLogCount = 0; // 로그 중복 렌더링 방지
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
+
+        // 계정 수정 제어용 로컬 변수
+        let isEditMode = false;
+        let editTargetId = "";
 
         window.onload = async () => {
             await fetchAccounts();
@@ -276,6 +288,7 @@
                 } else {
                     document.getElementById('menu-accounts').style.display = 'flex';
                 }
+                renderAccounts(); // 로그인 정보 연동 완료 시 테이블 작업 버튼 재렌더링
             } else {
                 alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
             }
@@ -286,35 +299,121 @@
             document.getElementById('login-id').value = "";
             document.getElementById('login-pw').value = "";
             document.getElementById('auth-overlay').style.display = 'flex';
+            cancelEditMode();
             switchView('dashboard', document.querySelector('.menu-item'));
         }
 
+        // [기능 추가] 생성 버튼 하나로 등록/수정 동시 처리 전환
         async function createNewAccount() {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 생성할 권한이 없습니다.");
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 관리할 권한이 없습니다.");
             
-            const newId = document.getElementById('new-user-id').value.trim();
-            const newPw = document.getElementById('new-user-pw').value.trim();
-            const newRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
+            const userId = document.getElementById('new-user-id').value.trim();
+            const userPw = document.getElementById('new-user-pw').value.trim();
+            const userRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
+            const userRole = document.getElementById('new-user-role').value;
 
-            if (!newId || !newPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
+            if (!userId || !userPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
+
+            if (isEditMode) {
+                // [수정 모드 로직 수행]
+                try {
+                    const res = await fetch(`/api/accounts/${editTargetId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pw: userPw, rbxId: userRbx, role: userRole, adminId: currentUserSession.id })
+                    });
+                    const data = await res.json();
+                    if (data.error) alert(data.error);
+                    else {
+                        alert(`계정 [${editTargetId}]의 정보 수정을 완료했습니다.`);
+                        cancelEditMode();
+                        await fetchAccounts();
+                    }
+                } catch (e) {
+                    console.error("계정 수정 중 네트워크 통신 오류", e);
+                }
+            } else {
+                // [신규 생성 모드 로직 수행]
+                try {
+                    const res = await fetch('/api/accounts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: userId, pw: userPw, rbxId: userRbx, role: userRole, adminId: currentUserSession.id })
+                    });
+
+                    const data = await res.json();
+                    if (data.error) alert(data.error);
+                    else {
+                        alert(`신규 관제원 계정 [${userId}]이 정상 발급되었습니다.`);
+                        cancelEditMode();
+                        await fetchAccounts();
+                    }
+                } catch (e) {
+                    console.error("계정 생성 오류", e);
+                }
+            }
+        }
+
+        // [기능 추가] 특정 계정 정보를 입력 박스에 바인딩하고 수정 모드로 전환
+        function startEditAccount(id, pw, rbxId, role) {
+            isEditMode = true;
+            editTargetId = id;
+
+            document.getElementById('admin-form-title').innerHTML = `<i class="fa-solid fa-user-gear"></i> 관제 계정 정보 대폭 수정 시스템`;
+            
+            const idInput = document.getElementById('new-user-id');
+            idInput.value = id;
+            idInput.disabled = true; // 아이디(고유 키)는 수정 불가 잠금
+
+            document.getElementById('new-user-pw').value = pw;
+            document.getElementById('new-user-rbx').value = rbxId;
+            document.getElementById('new-user-role').value = role;
+
+            document.getElementById('account-submit-btn').innerText = "기록 수정 적용하기";
+            document.getElementById('account-cancel-btn').style.display = "block";
+        }
+
+        // [기능 추가] 수정 취소 후 원래 등록 폼으로 클리어
+        function cancelEditMode() {
+            isEditMode = false;
+            editTargetId = "";
+
+            document.getElementById('admin-form-title').innerHTML = `<i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템`;
+            
+            const idInput = document.getElementById('new-user-id');
+            idInput.value = "";
+            idInput.disabled = false;
+
+            document.getElementById('new-user-pw').value = "";
+            document.getElementById('new-user-rbx').value = "1";
+            document.getElementById('new-user-role').value = "일반 관제원";
+
+            document.getElementById('account-submit-btn').innerText = "계정 생성 및 발급";
+            document.getElementById('account-cancel-btn').style.display = "none";
+        }
+
+        // [기능 추가] 계정 영구 삭제 통신 함수
+        async function deleteAccount(id) {
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 삭제할 권한이 없습니다.");
+            if (id === "lsrhjru") return alert("마스터 최고 관리자 계정은 삭제할 수 없습니다!");
+            
+            if (!confirm(`정말로 관제원 계정 [${id}]을 시스템 데이터베이스에서 영구 삭제하시겠습니까?`)) return;
 
             try {
-                const res = await fetch('/api/accounts', {
-                    method: 'POST',
+                const res = await fetch(`/api/accounts/${id}`, {
+                    method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: newId, pw: newPw, rbxId: newRbx, role: "일반 관제원", adminId: currentUserSession.id })
+                    body: JSON.stringify({ adminId: currentUserSession.id })
                 });
-
                 const data = await res.json();
                 if (data.error) alert(data.error);
                 else {
-                    alert(`계정 [${newId}]이 발급되었습니다.`);
-                    document.getElementById('new-user-id').value = "";
-                    document.getElementById('new-user-pw').value = "";
+                    alert(`계정 [${id}] 삭제 처리가 정상 승인되었습니다.`);
+                    if (editTargetId === id) cancelEditMode();
                     await fetchAccounts();
                 }
             } catch (e) {
-                console.error("계정 생성 오류", e);
+                console.error("계정 삭제 삭제 처리 중 에러 발생", e);
             }
         }
 
@@ -323,13 +422,25 @@
             tbody.innerHTML = "";
             accountDB.forEach(u => {
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
+                const isRoot = (u.id === 'lsrhjru');
                 const tr = document.createElement('tr');
+
+                // 최고 관리자 계정 로그인 상태일 때만 수정/삭제 액션 버튼 부여
+                let actionTemplate = `<span style="color:var(--text-muted); font-size:12px;">권한 없음</span>`;
+                if (currentUserSession && (currentUserSession.role === '최고 관리자' || currentUserSession.id === 'lsrhjru')) {
+                    actionTemplate = `
+                        <button class="btn btn-primary" style="padding: 4px 10px; font-size:11px; display:inline-block; margin-right:4px;" onclick="startEditAccount('${u.id}', '${u.pw}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
+                        ${isRoot ? '' : `<button class="btn btn-danger" style="padding: 4px 10px; font-size:11px; display:inline-block; box-shadow:none;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash-can"></i> 삭제</button>`}
+                    `;
+                }
+
                 tr.innerHTML = `
                     <td><img src="/api/avatar/${u.rbxId}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
+                    <td>${actionTemplate}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -475,7 +586,7 @@
 
                     const limitInput = card.querySelector('.limit-input');
                     if (document.activeElement !== limitInput) {
-                        limitInput.value = train.SpeedLimit || 30; // 기본값 30 수정
+                        limitInput.value = train.SpeedLimit || 30; 
                     }
 
                     const badge = card.querySelector('.v-badge');
@@ -490,13 +601,13 @@
                         badge.innerText = "정상 신호 운영";
                     }
 
-                    // 프록시 API를 사용해 이미지 로딩
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
                     const driverImgSrc = `/api/avatar/${targetUserId}`;
                     if(card.querySelector('.v-avatar').getAttribute('src') !== driverImgSrc) {
                         card.querySelector('.v-avatar').src = driverImgSrc;
                     }
-                    card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
+                    // 로블록스 닉네임(DisplayName)과 계정명(Name)을 대시보드상에 직관적으로 표출
+                    card.querySelector('.v-driver').innerText = train.DriverDisplayName ? `${train.DriverDisplayName} (@${train.DriverName})` : (train.DriverName || '승무원 없음');
                 }
             } catch (e) {
                 console.error("대시보드 동기화 오류...", e);
