@@ -207,7 +207,7 @@
                         <div style="flex: 1;">
                             <table class="custom-table">
                                 <thead>
-                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th></tr>
+                                    <tr><th>아바타</th><th>관제원 계정 ID</th><th>연동 로블록스 ID</th><th>권한 레벨</th><th>상태</th><th>관리</th></tr>
                                 </thead>
                                 <tbody id="account-table-body"></tbody>
                             </table>
@@ -271,7 +271,8 @@
                 // 프록시 API를 통해 아바타 호출
                 document.getElementById('my-avatar').src = `/api/avatar/${currentUserSession.rbxId}`;
 
-                if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자") {
+                // 📌 기존 데이터 호환성을 위해 'admin' 문자열 판정도 조건에 병합
+                if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자" && currentUserSession.role !== "admin") {
                     document.getElementById('menu-accounts').style.display = 'none';
                 } else {
                     document.getElementById('menu-accounts').style.display = 'flex';
@@ -290,7 +291,7 @@
         }
 
         async function createNewAccount() {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 생성할 권한이 없습니다.");
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자" && currentUserSession.role !== "admin")) return alert("계정을 생성할 권한이 없습니다.");
             
             const newId = document.getElementById('new-user-id').value.trim();
             const newPw = document.getElementById('new-user-pw').value.trim();
@@ -318,18 +319,49 @@
             }
         }
 
+        // 📌 [함수 추가] 계정 삭제 요청 전송 함수
+        async function deleteAccount(userId) {
+            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자" && currentUserSession.role !== "admin")) {
+                return alert("계정을 삭제할 권한이 없습니다.");
+            }
+
+            if (!confirm(`정말로 [${userId}] 계정을 시스템에서 영구 파기하시겠습니까?`)) return;
+
+            try {
+                const res = await fetch(`/api/accounts/${userId}`, { method: 'DELETE' });
+                const data = await res.json();
+
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(`계정 [${userId}]이 성공적으로 파기되었습니다.`);
+                    await fetchAccounts(); // 새로고침
+                }
+            } catch (e) {
+                console.error("계정 파기 중 오류 발생", e);
+            }
+        }
+
         function renderAccounts() {
             const tbody = document.getElementById('account-table-body');
             tbody.innerHTML = "";
             accountDB.forEach(u => {
-                const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
+                const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru' || u.role === 'admin');
                 const tr = document.createElement('tr');
+                
+                // 📌 삭제 버튼을 구성할 컬럼 스크립트 분기 (본인 계정은 삭제 불가)
+                let actionHtml = `<td>-</td>`;
+                if (u.id !== "lsrhjru") {
+                    actionHtml = `<td><button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px; display: inline-flex; width:auto;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash"></i> 삭제</button></td>`;
+                }
+
                 tr.innerHTML = `
                     <td><img src="/api/avatar/${u.rbxId}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
+                    ${actionHtml}
                 `;
                 tbody.appendChild(tr);
             });
