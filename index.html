@@ -745,7 +745,9 @@
                 document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('session-username').innerText = currentUserSession.id;
                 document.getElementById('session-role').innerText = currentUserSession.role;
-                document.getElementById('my-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${currentUserSession.rbxId}&size=150x150&format=Png&isCircular=true`;
+                
+                // 최적화된 고속 주소 적용 (본인 프로필)
+                document.getElementById('my-avatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${currentUserSession.rbxId}&width=150&height=150&format=png`;
 
                 // 최고 관리자 권한 확인 후 메뉴 보이기/숨기기
                 if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자" && currentUserSession.role !== "admin") {
@@ -824,8 +826,9 @@
                     `;
                 }
 
+                // 최적화된 고속 주소 적용 (계정 목록 테이블)
                 tr.innerHTML = `
-                    <td><img src="https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${u.rbxId}&size=150x150&format=Png&isCircular=true" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
+                    <td><img src="https://www.roblox.com/headshot-thumbnail/image?userId=${u.rbxId}&width=150&height=150&format=png" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td>${u.rbxId}</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
@@ -836,7 +839,7 @@
             });
         }
 
-        // [함수 추가] 계정 정보 수정 기능
+        // 계정 정보 수정 기능
         async function editAccount(id, currentPw, currentRbxId, currentRole) {
             const newPw = prompt(`[${id}] 계정의 새로운 비밀번호를 입력하세요 (기존 유지 시 공백):`, currentPw);
             if (newPw === null) return;
@@ -867,7 +870,7 @@
             }
         }
 
-        // [함수 추가] 계정 삭제 기능
+        // 계정 삭제 기능
         async function deleteAccount(id) {
             if (!confirm(`정말로 계정 [${id}]을 데이터베이스에서 영구 삭제하시겠습니까?`)) return;
 
@@ -1030,8 +1033,9 @@
                         badge.innerText = "정상 신호 운영";
                     }
 
+                    // 최적화된 고속 주소 적용 (실시간 대시보드 기장 카드)
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
-                    card.querySelector('.v-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${targetUserId}&size=150x150&format=Png&isCircular=true`;
+                    card.querySelector('.v-avatar').src = `https://www.roblox.com/headshot-thumbnail/image?userId=${targetUserId}&width=150&height=150&format=png`;
                     card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
                 }
             } catch (e) {
