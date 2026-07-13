@@ -15,7 +15,7 @@ if (fs.existsSync(DB_PATH)) {
     accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 } else {
     accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 4548323500, role: "최고 관리자" }
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "최고 관리자" }
     ];
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
@@ -43,45 +43,23 @@ app.post('/api/accounts', (req, res) => {
     res.json({ success: true });
 });
 
-// [API] 관제원 계정 정보 수정 (추가)
-app.put('/api/accounts/:id', (req, res) => {
-    const { id } = req.params;
-    const { pw, rbxId, role } = req.body;
-    
-    const account = accounts.find(a => a.id === id);
-    if (!account) {
-        return res.status(404).json({ error: "존재하지 않는 계정입니다." });
+// [API] 로블록스 아바타 실시간 이미지 프록시 (추가된 부분)
+app.get('/api/avatar/:rbxId', async (req, res) => {
+    const { rbxId } = req.params;
+    try {
+        // 로블록스 공식 아바타 헤드샷 썸네일 API 호출
+        const response = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=false`);
+        const data = await response.json();
+        
+        if (data && data.data && data.data[0] && data.data[0].imageUrl) {
+            // 이미지 주소를 찾으면 해당 주소로 리다이렉트
+            return res.redirect(data.data[0].imageUrl);
+        }
+    } catch (e) {
+        console.error("로블록스 아바타 조회 실패:", e);
     }
-
-    // 마스터 계정의 권한 강하 방지 안전장치
-    if (id === "lsrhjru" && role !== "최고 관리자") {
-        return res.status(400).json({ error: "마스터 계정의 권한 레벨은 변경할 수 없습니다." });
-    }
-
-    account.pw = pw;
-    account.rbxId = parseInt(rbxId) || 1;
-    account.role = role || "일반 관제원";
-    
-    saveAccounts();
-    res.json({ success: true });
-});
-
-// [API] 관제원 계정 삭제 (추가)
-app.delete('/api/accounts/:id', (req, res) => {
-    const { id } = req.params;
-    
-    if (id === "lsrhjru") {
-        return res.status(400).json({ error: "최고 관리자 마스터 계정은 삭제할 수 없습니다." });
-    }
-
-    const index = accounts.findIndex(a => a.id === id);
-    if (index === -1) {
-        return res.status(404).json({ error: "존재하지 않는 계정입니다." });
-    }
-
-    accounts.splice(index, 1);
-    saveAccounts();
-    res.json({ success: true });
+    // 에러 발생 혹은 이미지가 없을 시 기본 이미지로 대체
+    res.redirect('https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg');
 });
 
 // [API] 열차 상태 수신
@@ -97,7 +75,7 @@ app.post('/api/train-status', (req, res) => {
 
     trains[TrainId] = {
         ...req.body,
-        SpeedLimit: req.body.SpeedLimit || currentSpeedLimit, 
+        SpeedLimit: req.body.SpeedLimit || currentSpeedLimit, // ATC 제한속도 유지
         remoteEmergencyActive: previousEmergency,
         lastSeen: Date.now()
     };
@@ -112,11 +90,11 @@ app.post('/api/train-status', (req, res) => {
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
     for (const id in trains) {
-        if (now - trains[id].lastSeen > 30000) { 
+        if (now - trains[id].lastSeen > 30000) { // 30초 이상 신호 없으면 디스폰 처리
             delete trains[id];
         }
     }
-    res.json({ trains: trains, logs: [] }); // 빈 로그 포맷 대응 유지
+    res.json(trains);
 });
 
 // [API] 제한 속도 변경 명령
