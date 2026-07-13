@@ -130,15 +130,24 @@ app.get('/api/current-data', (req, res) => {
     res.json(trains);
 });
 
-// [API] 제한 속도 변경 명령
-app.post('/api/web-speedlimit', (req, res) => {
-    const { trainId, speedLimit } = req.body;
-    if (trains[trainId]) {
-        trains[trainId].SpeedLimit = speedLimit;
-        res.json({ success: true });
-    } else {
-        res.status(404).json({ error: "열차를 찾을 수 없습니다." });
-    }
+app.post('/api/train-status', (req, res) => {
+    const { TrainId } = req.body;
+    
+    // 기존 속도 제한을 유지 (없으면 기본값 80)
+    const existingLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : 80;
+    const existingEms = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
+
+    trains[TrainId] = {
+        ...req.body,
+        SpeedLimit: existingLimit, // 덮어쓰지 않고 기존값 유지
+        remoteEmergencyActive: existingEms,
+        lastSeen: Date.now()
+    };
+
+    res.json({
+        RemoteEmergency: trains[TrainId].remoteEmergencyActive,
+        SpeedLimit: trains[TrainId].SpeedLimit
+    });
 });
 
 // [API] 원격 비상 정지 명령
