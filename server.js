@@ -9,7 +9,7 @@ app.use(express.json());
 let trains = {};
 const DB_PATH = path.join(__dirname, 'accounts.json');
 
-// 시스템 초기화 시 계정 DB 안전하게 로드 (서버 크래시 방지용 예외 처리)
+// 시스템 초기화 시 계정 DB 안전하게 로드
 let accounts = [];
 try {
     if (fs.existsSync(DB_PATH)) {
@@ -24,7 +24,6 @@ try {
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
 
-// 계정 저장 헬퍼 함수
 const saveAccounts = () => fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 
 app.get('/', (req, res) => {
@@ -47,7 +46,7 @@ app.post('/api/accounts', (req, res) => {
     res.json({ success: true });
 });
 
-// [API] 계정 정보 변경 (관리자 전용)
+// [API] 계정 정보 변경
 app.put('/api/accounts/:id', (req, res) => {
     const { id } = req.params;
     const { pw, rbxId, role } = req.body;
@@ -65,37 +64,31 @@ app.put('/api/accounts/:id', (req, res) => {
     res.json({ success: true });
 });
 
-// [API] 계정 삭제 (관리자 전용)
+// [API] 계정 삭제
 app.delete('/api/accounts/:id', (req, res) => {
     const { id } = req.params;
-
     if (id === "lsrhjru") {
         return res.status(400).json({ error: "최고 관리자 계정은 삭제할 수 없습니다." });
     }
-
     const accountIndex = accounts.findIndex(a => a.id === id);
     if (accountIndex === -1) {
         return res.status(404).json({ error: "존재하지 않는 계정입니다." });
     }
-
     accounts.splice(accountIndex, 1);
     saveAccounts();
     res.json({ success: true });
 });
 
-// ⭐ [수정 완료] 로블록스 데이터 파싱 안전 지대 구성
+// [API] 로블록스 데이터 파싱 안전 지대 구성
 app.get('/api/roblox/user/:rbxId', async (req, res) => {
     const { rbxId } = req.params;
     try {
-        // 1. 유저 닉네임 및 기본정보 가져오기
         const userRes = await fetch(`https://users.roblox.com/v1/users/${rbxId}`);
         const userData = await userRes.json();
 
-        // 2. 아바타 헤드샷 실제 이미지 URL 획득하기
         const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=true`);
         const thumbData = await thumbRes.json();
 
-        // 데이터 누락 시 안전하게 예외 필터 처리
         const displayName = userData.displayName || userData.name || `User ${rbxId}`;
         const nameTag = userData.name ? ` (@${userData.name})` : '';
         const username = `${displayName}${nameTag}`;
@@ -114,7 +107,7 @@ app.get('/api/roblox/user/:rbxId', async (req, res) => {
     }
 });
 
-// [API] 열차 상태 수신 및 웹 설정값 동기화
+// 🔄 [API 수정] 열차 상태 수신 및 원격 제어 옵션 전달 (Vigilance 제어 키 추가)
 app.post('/api/train-status', (req, res) => {
     const { TrainId, SpeedLimit, Action } = req.body;
 
@@ -130,16 +123,23 @@ app.post('/api/train-status', (req, res) => {
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
     const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30);
 
+    // 🔒 [보완] 인게임 패킷 덮어쓰기 방지: 웹 관제탑에서 제어 중인 경계장치 상태 보존 (기본값: true)
+    const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined)
+        ? trains[TrainId].VigilanceEnabled
+        : true;
+
     trains[TrainId] = {
         ...req.body,
         SpeedLimit: targetSpeedLimit,
         remoteEmergencyActive: previousEmergency,
+        VigilanceEnabled: currentVigilanceState,
         lastSeen: Date.now()
     };
 
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
-        SpeedLimit: trains[TrainId].SpeedLimit
+        SpeedLimit: trains[TrainId].SpeedLimit,
+        VigilanceEnabled: trains[TrainId].VigilanceEnabled // 로블록스 열차 내부 스크립트로 전달됨
     });
 });
 
@@ -181,6 +181,17 @@ app.post('/api/web-reset', (req, res) => {
     const { trainId } = req.body;
     if (trains[trainId]) {
         trains[trainId].remoteEmergencyActive = false;
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: "열차를 찾을 수 없습니다." });
+    }
+});
+
+// 🚨 [API 신설] 웹 관제소 원격 운전자 경계장치 토글 명령 라우터
+app.post('/api/web-vigilance', (req, res) => {
+    const { trainId, vigilanceEnabled } = req.body;
+    if (trains[trainId]) {
+        trains[trainId].VigilanceEnabled = (vigilanceEnabled === true);
         res.json({ success: true });
     } else {
         res.status(404).json({ error: "열차를 찾을 수 없습니다." });
