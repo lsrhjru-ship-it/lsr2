@@ -107,15 +107,19 @@ app.get('/api/roblox/user/:rbxId', async (req, res) => {
     }
 });
 
-// 🔄 [API 수정] 열차 상태 수신 및 원격 제어 옵션 전달 (Vigilance 제어 키 추가)
+// 🔄 [API] 열차 상태 수신 및 원격 제어 옵션 전달 (대소문자 완벽 예외 처리 추가)
 app.post('/api/train-status', (req, res) => {
-    const { TrainId, SpeedLimit, Action } = req.body;
+    // 로블록스에서 보낼 수 있는 대소문자 속성 구조를 전부 감지해 묶어냅니다.
+    const TrainId = req.body.TrainId || req.body.trainId;
+    const SpeedLimit = req.body.SpeedLimit !== undefined ? req.body.SpeedLimit : req.body.speedLimit;
+    const Action = req.body.Action || req.body.action;
 
     if (!TrainId) {
         return res.status(400).json({ error: "TrainId가 누락되었습니다." });
     }
 
-    if (Action === "DELETE") {
+    // 세션 파괴 호출 시 신속 삭제
+    if (Action === "DELETE" || Action === "delete") {
         delete trains[TrainId];
         return res.json({ success: true, message: "열차가 정상 제거되었습니다." });
     }
@@ -130,6 +134,7 @@ app.post('/api/train-status', (req, res) => {
 
     trains[TrainId] = {
         ...req.body,
+        TrainId: TrainId, // key 통일 유지 보장
         SpeedLimit: targetSpeedLimit,
         remoteEmergencyActive: previousEmergency,
         VigilanceEnabled: currentVigilanceState,
@@ -154,9 +159,11 @@ app.get('/api/current-data', (req, res) => {
     res.json({ trains: trains, logs: [] });
 });
 
-// [API] 제한 속도 변경 명령
+// [API] 제한 속도 변경 명령 (안전 장치 강화)
 app.post('/api/web-speedlimit', (req, res) => {
-    const { trainId, speedLimit } = req.body;
+    const trainId = req.body.trainId || req.body.TrainId;
+    const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit;
+    
     if (trains[trainId]) {
         trains[trainId].SpeedLimit = parseInt(speedLimit) || 30;
         res.json({ success: true });
@@ -165,9 +172,9 @@ app.post('/api/web-speedlimit', (req, res) => {
     }
 });
 
-// [API] 원격 비상 정지 명령
+// [API] 원격 비상 정지 명령 (안전 장치 강화)
 app.post('/api/web-emergency', (req, res) => {
-    const { trainId } = req.body;
+    const trainId = req.body.trainId || req.body.TrainId;
     if (trains[trainId]) {
         trains[trainId].remoteEmergencyActive = true;
         res.json({ success: true });
@@ -176,9 +183,9 @@ app.post('/api/web-emergency', (req, res) => {
     }
 });
 
-// [API] 원격 비상 해제 명령
+// [API] 원격 비상 해제 명령 (안전 장치 강화)
 app.post('/api/web-reset', (req, res) => {
-    const { trainId } = req.body;
+    const trainId = req.body.trainId || req.body.TrainId;
     if (trains[trainId]) {
         trains[trainId].remoteEmergencyActive = false;
         res.json({ success: true });
@@ -187,11 +194,13 @@ app.post('/api/web-reset', (req, res) => {
     }
 });
 
-// 🚨 [API 신설] 웹 관제소 원격 운전자 경계장치 토글 명령 라우터
+// 🚨 [API] 웹 관제소 원격 운전자 경계장치 토글 명령 라우터 (안전 장치 강화)
 app.post('/api/web-vigilance', (req, res) => {
-    const { trainId, vigilanceEnabled } = req.body;
+    const trainId = req.body.trainId || req.body.TrainId;
+    const vigilanceEnabled = req.body.vigilanceEnabled !== undefined ? req.body.vigilanceEnabled : req.body.VigilanceEnabled;
+    
     if (trains[trainId]) {
-        trains[trainId].VigilanceEnabled = (vigilanceEnabled === true);
+        trains[trainId].VigilanceEnabled = (vigilanceEnabled === true || vigilanceEnabled === 'true' || vigilanceEnabled === 1);
         res.json({ success: true });
     } else {
         res.status(404).json({ error: "열차를 찾을 수 없습니다." });
