@@ -335,7 +335,7 @@
         /* 5. 열차 현황 카드 대시보드 */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 25px;
         }
 
@@ -453,11 +453,13 @@
 
         .control-zone {
             display: flex;
-            gap: 12px;
+            gap: 8px;
         }
 
         .control-zone .btn {
             flex: 1;
+            padding: 10px 4px;
+            font-size: 11px;
         }
 
         .status-badge {
@@ -716,25 +718,14 @@
         let editingTargetId = null;
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
 
-        // ⭐ [오류 해결] 프로미스 캐싱 및 중복 비동기 제어를 위한 맵 객체 신설
         const robloxCache = {};
         const robloxPromises = {};
 
-        // ⭐ [수정 완료] 완벽한 동기화와 트래픽 방지를 지원하는 프로미스 기반 비동기 프로필 조회기
         async function getRobloxProfile(rbxId) {
             const id = parseInt(rbxId) || 1;
+            if (robloxCache[id]) return robloxCache[id];
+            if (robloxPromises[id]) return robloxPromises[id];
 
-            // 1. 이미 파싱 완료되어 캐시 영역에 있으면 즉시 반환
-            if (robloxCache[id]) {
-                return robloxCache[id];
-            }
-
-            // 2. 현재 네트워크 트랜잭션이 수행 중이라면, 새로 fetch 하지 않고 동일한 Promise 공유
-            if (robloxPromises[id]) {
-                return robloxPromises[id];
-            }
-
-            // 3. 신규 프로미스 대기열 등록 (병목 방지 레이어)
             robloxPromises[id] = (async () => {
                 try {
                     const res = await fetch(`/api/roblox/user/${id}`);
@@ -750,7 +741,6 @@
                     robloxCache[id] = fallback;
                     return fallback;
                 } finally {
-                    // 작업 종료 시 대기열 맵에서 해제
                     delete robloxPromises[id];
                 }
             })();
@@ -786,7 +776,6 @@
             const inputPw = document.getElementById('login-pw').value.trim();
 
             await fetchAccounts();
-
             const found = accountDB.find(u => u.id === inputId && u.pw === inputPw);
 
             if (found) {
@@ -822,11 +811,8 @@
         }
 
         function submitAccountForm() {
-            if (isEditMode) {
-                updateExistingAccount();
-            } else {
-                createNewAccount();
-            }
+            if (isEditMode) updateExistingAccount();
+            else createNewAccount();
         }
 
         async function createNewAccount() {
@@ -934,10 +920,7 @@
             if (!confirm(`정말로 계정 [${id}]을(를) 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) return;
 
             try {
-                const res = await fetch(`/api/accounts/${id}`, {
-                    method: 'DELETE'
-                });
-
+                const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
                 const data = await res.json();
                 if (data.error) alert(data.error);
                 else {
@@ -1071,6 +1054,7 @@
                                 <div class="info-row"><span class="info-label">제어 단수</span><span class="info-value v-notch">N</span></div>
                                 <div class="info-row"><span class="info-label">역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
                                 <div class="info-row"><span class="info-label">현재 좌표 (X, Z)</span><span class="info-value v-pos" style="color:var(--text-muted);">0, 0</span></div>
+                                <div class="info-row"><span class="info-label">경계장치 상태</span><span class="info-value v-vigilance" style="font-weight:700;">활성화 (정상)</span></div>
                                 <div class="limit-input-zone">
                                     <span style="font-size:13px; font-weight:500;">ATC 제한속도 변경</span>
                                     <div>
@@ -1094,6 +1078,7 @@
                                 <div class="control-zone">
                                     <button class="btn btn-danger" onclick="triggerEmergency('${id}')"><i class="fa-solid fa-triangle-exclamation"></i> 비상정지</button>
                                     <button class="btn btn-safe" onclick="resetEmergency('${id}')"><i class="fa-solid fa-lock-open"></i> 해제</button>
+                                    <button class="btn v-vigilance-btn" onclick="toggleVigilance('${id}')"><i class="fa-solid fa-eye-slash"></i> 경계 끄기</button>
                                 </div>
                             </div>
                         `;
@@ -1113,6 +1098,25 @@
                     else if (train.CurrentReverser === -1) revText = "후진 (B)";
                     card.querySelector('.v-rev').innerText = revText;
                     card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
+
+                    // 🚨 [원격 운전자 경계장치 UI 실시간 동동기화 파트]
+                    const vigSpan = card.querySelector('.v-vigilance');
+                    const vigBtn = card.querySelector('.v-vigilance-btn');
+                    const isVigActive = train.VigilanceEnabled !== false; // 기본값 true
+
+                    if (isVigActive) {
+                        if (vigSpan) { vigSpan.innerText = "작동 중 (정상)"; vigSpan.style.color = "var(--success)"; }
+                        if (vigBtn) {
+                            vigBtn.style.background = "#e67e22";
+                            vigBtn.innerHTML = "<i class='fa-solid fa-eye-slash'></i> 경계 끄기";
+                        }
+                    } else {
+                        if (vigSpan) { vigSpan.innerText = "비활성화 (원격)"; vigSpan.style.color = "var(--danger)"; }
+                        if (vigBtn) {
+                            vigBtn.style.background = "var(--success)";
+                            vigBtn.innerHTML = "<i class='fa-solid fa-eye'></i> 경계 켜기";
+                        }
+                    }
 
                     const limitInput = card.querySelector('.limit-input');
                     if (document.activeElement !== limitInput) {
@@ -1172,6 +1176,21 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId, adminId: currentUserSession.id })
+            });
+        }
+
+        // 🚨 [원격 경계장치 온오프 비동기 POST 통신 패킷 생성 함수]
+        async function toggleVigilance(trainId) {
+            const card = document.querySelector(`.train-card[data-id="${trainId}"]`);
+            if (!card) return;
+            const vigSpan = card.querySelector('.v-vigilance');
+            const isCurrentlyEnabled = vigSpan && vigSpan.innerText.includes("작동 중");
+            const nextState = !isCurrentlyEnabled;
+
+            await fetch('/api/web-vigilance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId, vigilanceEnabled: nextState, adminId: currentUserSession.id })
             });
         }
 
