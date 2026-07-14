@@ -5,9 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로블록스 차세대 통합 관제 시스템</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -613,12 +611,9 @@
             </div>
         </div>
 
-        <div class="menu-item active" onclick="switchView('dashboard', this)"><i class="fa-solid fa-chart-line"></i> 실시간
-            통합 관제</div>
-        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)"><i
-                class="fa-solid fa-users-gear"></i> 계정 및 권한 관리</div>
-        <div class="menu-item" onclick="switchView('logs', this)"><i class="fa-solid fa-file-shield"></i> 시스템 감사 로그
-        </div>
+        <div class="menu-item active" onclick="switchView('dashboard', this)"><i class="fa-solid fa-chart-line"></i> 실시간 통합 관제</div>
+        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)"><i class="fa-solid fa-users-gear"></i> 계정 및 권한 관리</div>
+        <div class="menu-item" onclick="switchView('logs', this)"><i class="fa-solid fa-file-shield"></i> 시스템 감사 로그</div>
 
         <button class="btn btn-danger" style="margin-top: auto; padding: 12px; width: 100%;" onclick="handleLogout()">
             <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
@@ -628,15 +623,13 @@
     <div class="main-wrapper">
         <div class="top-navbar">
             <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
-            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM
-                    LIVE</span></div>
+            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM LIVE</span></div>
         </div>
 
         <div class="content-body">
             <div id="view-dashboard" class="view-section active">
                 <div class="map-section">
-                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map
-                    </div>
+                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map</div>
                     <div class="map-container" id="live-map"></div>
                 </div>
                 <div class="grid-container" id="dashboard-grid">
@@ -646,14 +639,10 @@
 
             <div id="view-accounts" class="view-section">
                 <div class="card-table-wrap">
-                    <div class="section-title" id="form-main-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급
-                        시스템</div>
+                    <div class="section-title" id="form-main-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
                     <div class="admin-flex">
-                        <!-- 계정 생성/수정 통합 동적 폼 -->
                         <div class="admin-form" id="account-form">
-                            <h3 id="form-action-title"
-                                style="margin-top:0; font-size:14px; color:var(--primary); margin-bottom:15px;">계정 생성
-                            </h3>
+                            <h3 id="form-action-title" style="margin-top:0; font-size:14px; color:var(--primary); margin-bottom:15px;">계정 생성</h3>
                             <div class="form-group">
                                 <label>관제원 ID</label>
                                 <input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정">
@@ -668,18 +657,14 @@
                             </div>
                             <div class="form-group">
                                 <label>권한 등급 설정</label>
-                                <select id="new-user-role" class="form-control"
-                                    style="background:#000; color:#fff; cursor: pointer;">
+                                <select id="new-user-role" class="form-control" style="background:#000; color:#fff; cursor: pointer;">
                                     <option value="일반 관제원">일반 관제원</option>
                                     <option value="최고 관리자">최고 관리자</option>
                                 </select>
                             </div>
                             <div style="display:flex; gap:10px;">
-                                <button id="btn-submit" class="btn btn-primary" style="flex:1; margin-top: 10px;"
-                                    onclick="submitAccountForm()">계정 생성 및 발급</button>
-                                <button id="btn-cancel" class="btn btn-danger"
-                                    style="flex:1; margin-top: 10px; display:none;"
-                                    onclick="cancelEditMode()">취소</button>
+                                <button id="btn-submit" class="btn btn-primary" style="flex:1; margin-top: 10px;" onclick="submitAccountForm()">계정 생성 및 발급</button>
+                                <button id="btn-cancel" class="btn btn-danger" style="flex:1; margin-top: 10px; display:none;" onclick="cancelEditMode()">취소</button>
                             </div>
                         </div>
                         <div style="flex: 1;">
@@ -711,15 +696,25 @@
     </div>
 
     <script>
+        // 마스터 및 시스템 상수 관리
+        const MASTER_ADMIN_ID = "lsrhjru"; 
+        const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
+        const FALLBACK_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
+
         let accountDB = [];
         let currentUserSession = null;
         let lastRenderedLogCount = 0;
         let isEditMode = false;
         let editingTargetId = null;
-        const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
 
         const robloxCache = {};
         const robloxPromises = {};
+
+        // 최고 관리자 또는 마스터 계정인지 확인하는 헬퍼 함수
+        function hasAdminPrivilege(user) {
+            if (!user) return false;
+            return user.id === MASTER_ADMIN_ID || user.role === "최고 관리자";
+        }
 
         async function getRobloxProfile(rbxId) {
             const id = parseInt(rbxId) || 1;
@@ -729,6 +724,7 @@
             robloxPromises[id] = (async () => {
                 try {
                     const res = await fetch(`/api/roblox/user/${id}`);
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     const data = await res.json();
                     robloxCache[id] = data;
                     return data;
@@ -736,7 +732,7 @@
                     console.error(`로블록스 정보 획득 실패 (ID: ${id})`, e);
                     const fallback = {
                         username: `ID: ${id}`,
-                        avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg"
+                        avatarUrl: FALLBACK_AVATAR
                     };
                     robloxCache[id] = fallback;
                     return fallback;
@@ -755,6 +751,7 @@
         async function fetchAccounts() {
             try {
                 const res = await fetch('/api/accounts');
+                if (!res.ok) throw new Error("계정 목록 로드 실패");
                 accountDB = await res.json();
                 renderAccounts();
             } catch (e) {
@@ -772,8 +769,13 @@
         }
 
         async function handleLogin() {
-            const inputId = document.getElementById('login-id').value.trim();
-            const inputPw = document.getElementById('login-pw').value.trim();
+            const idInput = document.getElementById('login-id');
+            const pwInput = document.getElementById('login-pw');
+            const inputId = idInput.value.trim();
+            const inputPw = pwInput.value.trim();
+
+            if (!inputId) { alert("아이디를 입력하세요."); idInput.focus(); return; }
+            if (!inputPw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
 
             await fetchAccounts();
             const found = accountDB.find(u => u.id === inputId && u.pw === inputPw);
@@ -789,7 +791,7 @@
                 document.getElementById('my-avatar').src = profile.avatarUrl;
                 document.getElementById('session-username').innerText = profile.username;
 
-                if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자") {
+                if (!hasAdminPrivilege(currentUserSession)) {
                     document.getElementById('menu-accounts').style.display = 'none';
                 } else {
                     document.getElementById('menu-accounts').style.display = 'flex';
@@ -804,7 +806,7 @@
             document.getElementById('login-id').value = "";
             document.getElementById('login-pw').value = "";
             document.getElementById('auth-overlay').style.display = 'flex';
-            document.getElementById('my-avatar').src = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
+            document.getElementById('my-avatar').src = FALLBACK_AVATAR;
             document.getElementById('session-username').innerText = "대기 중";
             document.getElementById('session-role').innerText = "-";
             switchView('dashboard', document.querySelector('.menu-item'));
@@ -816,14 +818,17 @@
         }
 
         async function createNewAccount() {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 생성할 권한이 없습니다.");
+            if (!hasAdminPrivilege(currentUserSession)) return alert("계정을 생성할 권한이 없습니다.");
 
-            const newId = document.getElementById('new-user-id').value.trim();
-            const newPw = document.getElementById('new-user-pw').value.trim();
+            const idInput = document.getElementById('new-user-id');
+            const pwInput = document.getElementById('new-user-pw');
+            const newId = idInput.value.trim();
+            const newPw = pwInput.value.trim();
             const newRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
             const newRole = document.getElementById('new-user-role').value;
 
-            if (!newId || !newPw) return alert("아이디와 비밀번호를 모두 입력하세요.");
+            if (!newId) { alert("발급할 관제원 아이디를 입력하세요."); idInput.focus(); return; }
+            if (!newPw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
 
             try {
                 const res = await fetch('/api/accounts', {
@@ -835,7 +840,7 @@
                 const data = await res.json();
                 if (data.error) alert(data.error);
                 else {
-                    alert(`계정 [${newId}]이 발급되었습니다.`);
+                    alert(`계정 [${newId}]이 정상 발급되었습니다.`);
                     clearForm();
                     await fetchAccounts();
                 }
@@ -886,13 +891,14 @@
         }
 
         async function updateExistingAccount() {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 수정할 권한이 없습니다.");
+            if (!hasAdminPrivilege(currentUserSession)) return alert("계정을 수정할 권한이 없습니다.");
 
-            const pw = document.getElementById('new-user-pw').value.trim();
+            const pwInput = document.getElementById('new-user-pw');
+            const pw = pwInput.value.trim();
             const rbxId = parseInt(document.getElementById('new-user-rbx').value) || 1;
             const role = document.getElementById('new-user-role').value;
 
-            if (!pw) return alert("비밀번호를 입력하세요.");
+            if (!pw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
 
             try {
                 const res = await fetch(`/api/accounts/${editingTargetId}`, {
@@ -914,8 +920,8 @@
         }
 
         async function deleteAccount(id) {
-            if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 삭제할 권한이 없습니다.");
-            if (id === "lsrhjru") return alert("최고 관리자 계정은 삭제할 수 없습니다.");
+            if (!hasAdminPrivilege(currentUserSession)) return alert("계정을 삭제할 권한이 없습니다.");
+            if (id === MASTER_ADMIN_ID) return alert("시스템 마스터 계정은 삭제할 수 없습니다.");
 
             if (!confirm(`정말로 계정 [${id}]을(를) 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) return;
 
@@ -937,7 +943,7 @@
             const tbody = document.getElementById('account-table-body');
             tbody.innerHTML = "";
             accountDB.forEach(u => {
-                const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
+                const isSuperAdmin = (u.role === '최고 관리자' || u.id === MASTER_ADMIN_ID);
                 const tr = document.createElement('tr');
 
                 const actionButtons = isSuperAdmin ?
@@ -946,7 +952,7 @@
                      <button class="btn btn-danger" style="display:inline-block; padding: 4px 10px; font-size:11px; font-weight:700;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash"></i> 삭제</button>`;
 
                 tr.innerHTML = `
-                    <td><img id="acc-avatar-${u.id}" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
+                    <td><img id="acc-avatar-${u.id}" src="${FALLBACK_AVATAR}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
                     <td style="font-weight:bold;">${u.id}</td>
                     <td><span id="acc-name-${u.id}">불러오는 중...</span> (ID: ${u.rbxId})</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
@@ -965,8 +971,7 @@
         }
 
         function renderLogs(logs) {
-            if (!logs || logs.length === 0) return;
-            if (logs.length === lastRenderedLogCount) return;
+            if (!logs || logs.length === 0 || logs.length === lastRenderedLogCount) return;
 
             const container = document.getElementById('log-display-container');
             container.innerHTML = "";
@@ -987,6 +992,7 @@
 
             try {
                 const res = await fetch('/api/current-data');
+                if (!res.ok) throw new Error("실시간 데이터 동기화 실패");
                 const data = await res.json();
 
                 const trains = data.trains || {};
@@ -1069,7 +1075,7 @@
                             </div>
                             <div>
                                 <div class="driver-zone">
-                                    <img class="avatar v-avatar" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" alt="Driver">
+                                    <img class="avatar v-avatar" src="${FALLBACK_AVATAR}" alt="Driver">
                                     <div class="driver-meta">
                                         <span class="driver-name v-driver">대기 중</span>
                                         <span style="font-size:11px; color:var(--text-muted);">Roblox 기장</span>
@@ -1099,10 +1105,9 @@
                     card.querySelector('.v-rev').innerText = revText;
                     card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
 
-                    // 🚨 [원격 운전자 경계장치 UI 실시간 동동기화 파트]
                     const vigSpan = card.querySelector('.v-vigilance');
                     const vigBtn = card.querySelector('.v-vigilance-btn');
-                    const isVigActive = train.VigilanceEnabled !== false; // 기본값 true
+                    const isVigActive = train.VigilanceEnabled !== false;
 
                     if (isVigActive) {
                         if (vigSpan) { vigSpan.innerText = "작동 중 (정상)"; vigSpan.style.color = "var(--success)"; }
@@ -1179,7 +1184,6 @@
             });
         }
 
-        // 🚨 [원격 경계장치 온오프 비동기 POST 통신 패킷 생성 함수]
         async function toggleVigilance(trainId) {
             const card = document.querySelector(`.train-card[data-id="${trainId}"]`);
             if (!card) return;
