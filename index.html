@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로블록스 차세대 통합 관제 시스템</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -611,9 +613,12 @@
             </div>
         </div>
 
-        <div class="menu-item active" onclick="switchView('dashboard', this)"><i class="fa-solid fa-chart-line"></i> 실시간 통합 관제</div>
-        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)"><i class="fa-solid fa-users-gear"></i> 계정 및 권한 관리</div>
-        <div class="menu-item" onclick="switchView('logs', this)"><i class="fa-solid fa-file-shield"></i> 시스템 감사 로그</div>
+        <div class="menu-item active" onclick="switchView('dashboard', this)"><i class="fa-solid fa-chart-line"></i> 실시간
+            통합 관제</div>
+        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)"><i
+                class="fa-solid fa-users-gear"></i> 계정 및 권한 관리</div>
+        <div class="menu-item" onclick="switchView('logs', this)"><i class="fa-solid fa-file-shield"></i> 시스템 감사 로그
+        </div>
 
         <button class="btn btn-danger" style="margin-top: auto; padding: 12px; width: 100%;" onclick="handleLogout()">
             <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
@@ -623,13 +628,15 @@
     <div class="main-wrapper">
         <div class="top-navbar">
             <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
-            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM LIVE</span></div>
+            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM
+                    LIVE</span></div>
         </div>
 
         <div class="content-body">
             <div id="view-dashboard" class="view-section active">
                 <div class="map-section">
-                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map</div>
+                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map
+                    </div>
                     <div class="map-container" id="live-map"></div>
                 </div>
                 <div class="grid-container" id="dashboard-grid">
@@ -639,10 +646,13 @@
 
             <div id="view-accounts" class="view-section">
                 <div class="card-table-wrap">
-                    <div class="section-title" id="form-main-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
+                    <div class="section-title" id="form-main-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급
+                        시스템</div>
                     <div class="admin-flex">
                         <div class="admin-form" id="account-form">
-                            <h3 id="form-action-title" style="margin-top:0; font-size:14px; color:var(--primary); margin-bottom:15px;">계정 생성</h3>
+                            <h3 id="form-action-title"
+                                style="margin-top:0; font-size:14px; color:var(--primary); margin-bottom:15px;">계정 생성
+                            </h3>
                             <div class="form-group">
                                 <label>관제원 ID</label>
                                 <input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정">
@@ -657,14 +667,18 @@
                             </div>
                             <div class="form-group">
                                 <label>권한 등급 설정</label>
-                                <select id="new-user-role" class="form-control" style="background:#000; color:#fff; cursor: pointer;">
+                                <select id="new-user-role" class="form-control"
+                                    style="background:#000; color:#fff; cursor: pointer;">
                                     <option value="일반 관제원">일반 관제원</option>
                                     <option value="최고 관리자">최고 관리자</option>
                                 </select>
                             </div>
                             <div style="display:flex; gap:10px;">
-                                <button id="btn-submit" class="btn btn-primary" style="flex:1; margin-top: 10px;" onclick="submitAccountForm()">계정 생성 및 발급</button>
-                                <button id="btn-cancel" class="btn btn-danger" style="flex:1; margin-top: 10px; display:none;" onclick="cancelEditMode()">취소</button>
+                                <button id="btn-submit" class="btn btn-primary" style="flex:1; margin-top: 10px;"
+                                    onclick="submitAccountForm()">계정 생성 및 발급</button>
+                                <button id="btn-cancel" class="btn btn-danger"
+                                    style="flex:1; margin-top: 10px; display:none;"
+                                    onclick="cancelEditMode()">취소</button>
                             </div>
                         </div>
                         <div style="flex: 1;">
@@ -696,7 +710,7 @@
     </div>
 
     <script>
-        const MASTER_ADMIN_ID = "lsrhjru"; 
+        const MASTER_ADMIN_ID = "lsrhjru";
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
         const FALLBACK_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
 
@@ -721,7 +735,6 @@
 
             robloxPromises[id] = (async () => {
                 try {
-                    // 캐시 유도 방지를 위해 무작위 타임스탬프 추가 적용
                     const res = await fetch(`/api/roblox/user/${id}?t=${Date.now()}`, { cache: 'no-store' });
                     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     const data = await res.json();
@@ -986,12 +999,10 @@
             lastRenderedLogCount = logs.length;
         }
 
-        // [핵심 수정] 실시간 데이터 갱신 API 연동 최적화 및 캐시 완전 타파
         async function updateDashboard() {
             if (!currentUserSession) return;
 
             try {
-                // 실시간 타임스탬프 파라미터(?t=...)와 no-store 헤더 조합으로 강제 실시간 우회 동기화 성공
                 const res = await fetch(`/api/current-data?t=${Date.now()}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error("실시간 데이터 동기화 실패");
                 const data = await res.json();
@@ -1046,8 +1057,7 @@
                     let pctZ = (((train.PositionZ || 0) - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
                     marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;
                     marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
-                    
-                    // TrainName 누락으로 인한 런타임 크래시 완전 방어 조치
+
                     const safeTrainName = train.TrainName || "운행열차";
                     marker.querySelector('.train-marker-label').innerText = `${safeTrainName.split(' ')[0]} (${train.CurrentSpeed || 0}km/h)`;
 
@@ -1204,7 +1214,6 @@
             });
         }
 
-        // 매 1초(1000ms)마다 실시간 동기화 함수 강제 호출 루프 작동
         setInterval(updateDashboard, 1000);
     </script>
 </body>
