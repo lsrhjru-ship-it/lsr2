@@ -9,13 +9,17 @@ app.use(express.json());
 let trains = {};
 const DB_PATH = path.join(__dirname, 'accounts.json');
 
-// 시스템 초기화 시 계정 DB 로드 (최고 관리자 기본 생성 및 권한 동기화)
+// 시스템 초기화 시 계정 DB 안전하게 로드 (서버 크래시 방지용 예외 처리)
 let accounts = [];
-if (fs.existsSync(DB_PATH)) {
-    accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-} else {
+try {
+    if (fs.existsSync(DB_PATH)) {
+        accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+    } else {
+        throw new Error("DB 파일 없음");
+    }
+} catch (e) {
     accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "최고 관리자" }
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 4548323500, role: "최고 관리자" }
     ];
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
@@ -38,7 +42,7 @@ app.post('/api/accounts', (req, res) => {
     if (accounts.some(a => a.id === id)) {
         return res.status(400).json({ error: "이미 존재하는 ID입니다." });
     }
-    accounts.push({ id, pw, rbxId, role: role || "일반 관제원" });
+    accounts.push({ id, pw, rbxId: parseInt(rbxId) || 1, role: role || "일반 관제원" });
     saveAccounts();
     res.json({ success: true });
 });
@@ -79,6 +83,37 @@ app.delete('/api/accounts/:id', (req, res) => {
     res.json({ success: true });
 });
 
+// ⭐ [수정 완료] 로블록스 데이터 파싱 안전 지대 구성
+app.get('/api/roblox/user/:rbxId', async (req, res) => {
+    const { rbxId } = req.params;
+    try {
+        // 1. 유저 닉네임 및 기본정보 가져오기
+        const userRes = await fetch(`https://users.roblox.com/v1/users/${rbxId}`);
+        const userData = await userRes.json();
+
+        // 2. 아바타 헤드샷 실제 이미지 URL 획득하기
+        const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=true`);
+        const thumbData = await thumbRes.json();
+
+        // 데이터 누락 시 안전하게 예외 필터 처리
+        const displayName = userData.displayName || userData.name || `User ${rbxId}`;
+        const nameTag = userData.name ? ` (@${userData.name})` : '';
+        const username = `${displayName}${nameTag}`;
+
+        const avatarUrl = (thumbData.data && thumbData.data[0])
+            ? thumbData.data[0].imageUrl
+            : "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
+
+        res.json({ username, avatarUrl });
+    } catch (error) {
+        console.error("로블록스 데이터 연동 실패:", error);
+        res.json({
+            username: `User ${rbxId}`,
+            avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg"
+        });
+    }
+});
+
 // [API] 열차 상태 수신 및 웹 설정값 동기화
 app.post('/api/train-status', (req, res) => {
     const { TrainId, SpeedLimit, Action } = req.body;
@@ -87,15 +122,12 @@ app.post('/api/train-status', (req, res) => {
         return res.status(400).json({ error: "TrainId가 누락되었습니다." });
     }
 
-    // 인게임 기차 파괴/삭제 명령 감지 시 메모리 즉시 정리
     if (Action === "DELETE") {
         delete trains[TrainId];
         return res.json({ success: true, message: "열차가 정상 제거되었습니다." });
     }
 
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
-
-    // ⭐ [핵심 버그 수정] 웹 대시보드에서 수정한 값을 최우선 유지합니다. (없을 때만 기차가 보낸 값 적용)
     const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30);
 
     trains[TrainId] = {
@@ -115,11 +147,11 @@ app.post('/api/train-status', (req, res) => {
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
     for (const id in trains) {
-        if (now - trains[id].lastSeen > 30000) { // 30초 간 통신 두절 시 자동 제거
+        if (now - trains[id].lastSeen > 30000) {
             delete trains[id];
         }
     }
-    res.json({ trains: trains, logs: [] }); // 감사로그 틀 보존
+    res.json({ trains: trains, logs: [] });
 });
 
 // [API] 제한 속도 변경 명령
