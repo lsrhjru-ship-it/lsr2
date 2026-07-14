@@ -604,7 +604,7 @@
         </div>
 
         <div class="user-profile-box">
-            <img id="my-avatar" src="" alt="Avatar">
+            <img id="my-avatar" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" alt="Avatar">
             <div class="user-info">
                 <div class="u-name" id="session-username">대기 중</div>
                 <div class="u-role" id="session-role">-</div>
@@ -716,6 +716,48 @@
         let editingTargetId = null;
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
 
+        // ⭐ [오류 해결] 프로미스 캐싱 및 중복 비동기 제어를 위한 맵 객체 신설
+        const robloxCache = {};
+        const robloxPromises = {};
+
+        // ⭐ [수정 완료] 완벽한 동기화와 트래픽 방지를 지원하는 프로미스 기반 비동기 프로필 조회기
+        async function getRobloxProfile(rbxId) {
+            const id = parseInt(rbxId) || 1;
+
+            // 1. 이미 파싱 완료되어 캐시 영역에 있으면 즉시 반환
+            if (robloxCache[id]) {
+                return robloxCache[id];
+            }
+
+            // 2. 현재 네트워크 트랜잭션이 수행 중이라면, 새로 fetch 하지 않고 동일한 Promise 공유
+            if (robloxPromises[id]) {
+                return robloxPromises[id];
+            }
+
+            // 3. 신규 프로미스 대기열 등록 (병목 방지 레이어)
+            robloxPromises[id] = (async () => {
+                try {
+                    const res = await fetch(`/api/roblox/user/${id}`);
+                    const data = await res.json();
+                    robloxCache[id] = data;
+                    return data;
+                } catch (e) {
+                    console.error(`로블록스 정보 획득 실패 (ID: ${id})`, e);
+                    const fallback = {
+                        username: `ID: ${id}`,
+                        avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg"
+                    };
+                    robloxCache[id] = fallback;
+                    return fallback;
+                } finally {
+                    // 작업 종료 시 대기열 맵에서 해제
+                    delete robloxPromises[id];
+                }
+            })();
+
+            return robloxPromises[id];
+        }
+
         window.onload = async () => {
             await fetchAccounts();
         };
@@ -750,10 +792,13 @@
             if (found) {
                 currentUserSession = found;
                 document.getElementById('auth-overlay').style.display = 'none';
-                document.getElementById('session-username').innerText = currentUserSession.id;
                 document.getElementById('session-role').innerText = currentUserSession.role;
 
-                document.getElementById('my-avatar').src = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${currentUserSession.rbxId}&size=150x150&format=Png&isCircular=true`;
+                document.getElementById('session-username').innerText = "로딩 중...";
+                const profile = await getRobloxProfile(currentUserSession.rbxId);
+
+                document.getElementById('my-avatar').src = profile.avatarUrl;
+                document.getElementById('session-username').innerText = profile.username;
 
                 if (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자") {
                     document.getElementById('menu-accounts').style.display = 'none';
@@ -770,10 +815,12 @@
             document.getElementById('login-id').value = "";
             document.getElementById('login-pw').value = "";
             document.getElementById('auth-overlay').style.display = 'flex';
+            document.getElementById('my-avatar').src = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
+            document.getElementById('session-username').innerText = "대기 중";
+            document.getElementById('session-role').innerText = "-";
             switchView('dashboard', document.querySelector('.menu-item'));
         }
 
-        // 통합 제출 라우터
         function submitAccountForm() {
             if (isEditMode) {
                 updateExistingAccount();
@@ -782,7 +829,6 @@
             }
         }
 
-        // 1. 신규 계정 생성
         async function createNewAccount() {
             if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 생성할 권한이 없습니다.");
 
@@ -812,7 +858,6 @@
             }
         }
 
-        // 2. 수정 모드 시작 진입점
         function startEditMode(id, pw, rbxId, role) {
             isEditMode = true;
             editingTargetId = id;
@@ -822,7 +867,7 @@
 
             const idInput = document.getElementById('new-user-id');
             idInput.value = id;
-            idInput.disabled = true; // ID 변경 비활성화 방지 규칙 적용
+            idInput.disabled = true;
 
             document.getElementById('new-user-pw').value = pw;
             document.getElementById('new-user-rbx').value = rbxId;
@@ -832,7 +877,6 @@
             document.getElementById('btn-cancel').style.display = "block";
         }
 
-        // 3. 수정 취소 및 복구
         function cancelEditMode() {
             isEditMode = false;
             editingTargetId = null;
@@ -855,7 +899,6 @@
             document.getElementById('btn-cancel').style.display = "none";
         }
 
-        // 4. 정보 수정 처리
         async function updateExistingAccount() {
             if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 수정할 권한이 없습니다.");
 
@@ -884,7 +927,6 @@
             }
         }
 
-        // 5. 계정 삭제 기능
         async function deleteAccount(id) {
             if (!currentUserSession || (currentUserSession.id !== "lsrhjru" && currentUserSession.role !== "최고 관리자")) return alert("계정을 삭제할 권한이 없습니다.");
             if (id === "lsrhjru") return alert("최고 관리자 계정은 삭제할 수 없습니다.");
@@ -915,21 +957,27 @@
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === 'lsrhjru');
                 const tr = document.createElement('tr');
 
-                // 최고관리자 안전 방어 기능 활성화
                 const actionButtons = isSuperAdmin ?
                     `<span style="color:var(--text-muted); font-size:12px;"><i class="fa-solid fa-lock"></i> 수정/삭제 보호됨</span>` :
                     `<button class="btn btn-primary" style="display:inline-block; padding: 4px 10px; font-size:11px; margin-right:5px; font-weight:700;" onclick="startEditMode('${u.id}', '${u.pw}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen"></i> 수정</button>
                      <button class="btn btn-danger" style="display:inline-block; padding: 4px 10px; font-size:11px; font-weight:700;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash"></i> 삭제</button>`;
 
                 tr.innerHTML = `
-                    <td><img src="https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${u.rbxId}&size=150x150&format=Png&isCircular=true" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"></td>
+                    <td><img id="acc-avatar-${u.id}" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
                     <td style="font-weight:bold;">${u.id}</td>
-                    <td>${u.rbxId}</td>
+                    <td><span id="acc-name-${u.id}">불러오는 중...</span> (ID: ${u.rbxId})</td>
                     <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
                     <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
                     <td>${actionButtons}</td>
                 `;
                 tbody.appendChild(tr);
+
+                getRobloxProfile(u.rbxId).then(profile => {
+                    const avatarImg = document.getElementById(`acc-avatar-${u.id}`);
+                    const nameSpan = document.getElementById(`acc-name-${u.id}`);
+                    if (avatarImg) avatarImg.src = profile.avatarUrl;
+                    if (nameSpan) nameSpan.innerText = profile.username;
+                });
             });
         }
 
@@ -1037,7 +1085,7 @@
                             </div>
                             <div>
                                 <div class="driver-zone">
-                                    <img class="avatar v-avatar" src="" alt="Driver" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'">
+                                    <img class="avatar v-avatar" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" alt="Driver">
                                     <div class="driver-meta">
                                         <span class="driver-name v-driver">대기 중</span>
                                         <span style="font-size:11px; color:var(--text-muted);">Roblox 기장</span>
@@ -1084,11 +1132,16 @@
                     }
 
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
-                    const driverImgSrc = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${targetUserId}&size=150x150&format=Png&isCircular=true`;
-                    if (card.querySelector('.v-avatar').getAttribute('src') !== driverImgSrc) {
-                        card.querySelector('.v-avatar').src = driverImgSrc;
-                    }
-                    card.querySelector('.v-driver').innerText = train.DriverName || '승무원 없음';
+                    getRobloxProfile(targetUserId).then(profile => {
+                        const avatarImg = card.querySelector('.v-avatar');
+                        const nameSpan = card.querySelector('.v-driver');
+                        if (avatarImg && avatarImg.src !== profile.avatarUrl) {
+                            avatarImg.src = profile.avatarUrl;
+                        }
+                        if (nameSpan) {
+                            nameSpan.innerText = train.DriverName || profile.username;
+                        }
+                    });
                 }
             } catch (e) {
                 console.error("대시보드 동기화 오류...", e);
