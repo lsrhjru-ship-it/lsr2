@@ -9,13 +9,13 @@ app.use(express.json());
 let trains = {};
 const DB_PATH = path.join(__dirname, 'accounts.json');
 
-// 시스템 초기화 시 계정 DB 로드 (파일이 없으면 최고 관리자 기본 생성)
+// 시스템 초기화 시 계정 DB 로드 (최고 관리자 기본 생성 및 권한 동기화)
 let accounts = [];
 if (fs.existsSync(DB_PATH)) {
     accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 } else {
     accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 4548323500, role: "최고 관리자" }
+        { id: "lsrhjru", pw: "lsr37733*", rbxId: 1, role: "최고 관리자" }
     ];
     fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 }
@@ -43,104 +43,95 @@ app.post('/api/accounts', (req, res) => {
     res.json({ success: true });
 });
 
-// 🌟 [API] 관제원 정보 수정 기능 (추가됨)
-app.post('/api/accounts/update', (req, res) => {
-    const { id, pw, rbxId, role } = req.body;
-    
-    const account = accounts.find(a => a.id === id);
-    if (!account) {
-        return res.status(404).json({ error: "해당 계정을 찾을 수 없습니다." });
+// [API] 계정 정보 변경 (관리자 전용)
+app.put('/api/accounts/:id', (req, res) => {
+    const { id } = req.params;
+    const { pw, rbxId, role } = req.body;
+
+    const accountIndex = accounts.findIndex(a => a.id === id);
+    if (accountIndex === -1) {
+        return res.status(404).json({ error: "존재하지 않는 계정입니다." });
     }
 
-    // 값 변경 (입력된 값이 있을 때만 변경)
-    if (pw) account.pw = pw;
-    if (rbxId !== undefined) account.rbxId = parseInt(rbxId) || 1;
-    if (role) account.role = role;
+    if (pw) accounts[accountIndex].pw = pw;
+    if (rbxId !== undefined) accounts[accountIndex].rbxId = parseInt(rbxId) || 1;
+    if (role) accounts[accountIndex].role = role;
 
     saveAccounts();
     res.json({ success: true });
 });
 
-// [API] 관제원 계정 삭제 기능
+// [API] 계정 삭제 (관리자 전용)
 app.delete('/api/accounts/:id', (req, res) => {
-    const targetId = req.params.id;
-    
-    if (targetId === "lsrhjru") {
-        return res.status(400).json({ error: "최고 시스템 관리자 마스터 계정은 삭제할 수 없습니다." });
+    const { id } = req.params;
+
+    if (id === "lsrhjru") {
+        return res.status(400).json({ error: "최고 관리자 계정은 삭제할 수 없습니다." });
     }
 
-    const index = accounts.findIndex(a => a.id === targetId);
-    if (index === -1) {
-        return res.status(404).json({ error: "해당 계정을 찾을 수 없습니다." });
+    const accountIndex = accounts.findIndex(a => a.id === id);
+    if (accountIndex === -1) {
+        return res.status(404).json({ error: "존재하지 않는 계정입니다." });
     }
 
-    accounts.splice(index, 1);
+    accounts.splice(accountIndex, 1);
     saveAccounts();
     res.json({ success: true });
 });
 
-// [API] 로블록스 아바타 실시간 이미지 프록시
-app.get('/api/avatar/:rbxId', async (req, res) => {
-    const { rbxId } = req.params;
-    try {
-        const response = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=false`);
-        const data = await response.json();
-        
-        if (data && data.data && data.data[0] && data.data[0].imageUrl) {
-            return res.redirect(data.data[0].imageUrl);
-        }
-    } catch (e) {
-        console.error("로블록스 아바타 조회 실패:", e);
-    }
-    res.redirect('https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg');
-});
-
-// server.js 의 [API] 열차 상태 수신 부분을 아래로 교체하세요
-// [API] 열차 상태 수신 수정본
+// [API] 열차 상태 수신 및 웹 설정값 동기화
 app.post('/api/train-status', (req, res) => {
-    const { TrainId } = req.body;
-    if (!TrainId) return res.status(400).json({ error: "TrainId 없음" });
+    const { TrainId, SpeedLimit, Action } = req.body;
 
-    // 1. 기존에 서버에 저장된 데이터 확인
-    const oldData = trains[TrainId];
+    if (!TrainId) {
+        return res.status(400).json({ error: "TrainId가 누락되었습니다." });
+    }
 
-    // 2. 서버에 이미 설정된 제한속도가 있다면 그 값을 우선 사용
-    // 없다면 로블록스가 보낸 값을 사용함
-    const currentLimit = (oldData && oldData.SpeedLimit) ? oldData.SpeedLimit : (req.body.SpeedLimit || 80);
-    const remoteEmergency = (oldData && oldData.remoteEmergencyActive !== undefined) ? oldData.remoteEmergencyActive : false;
+    // 인게임 기차 파괴/삭제 명령 감지 시 메모리 즉시 정리
+    if (Action === "DELETE") {
+        delete trains[TrainId];
+        return res.json({ success: true, message: "열차가 정상 제거되었습니다." });
+    }
 
-    // 3. 서버에 상태 저장 (로블록스가 보낸 속도값은 여기서 무시하고 currentLimit을 유지)
+    const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
+
+    // ⭐ [핵심 버그 수정] 웹 대시보드에서 수정한 값을 최우선 유지합니다. (없을 때만 기차가 보낸 값 적용)
+    const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30);
+
     trains[TrainId] = {
         ...req.body,
-        SpeedLimit: currentLimit, 
-        remoteEmergencyActive: remoteEmergency,
+        SpeedLimit: targetSpeedLimit,
+        remoteEmergencyActive: previousEmergency,
         lastSeen: Date.now()
     };
 
-    // 4. 응답으로 유지된 값을 로블록스 기차로 다시 전송
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit
     });
 });
-// server.js의 [API] 대시보드 데이터 전송 부분을 아래와 같이 수정
+
+// [API] 대시보드 데이터 전송
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
-    let activeTrains = {}; // 응답용 임시 객체
-    
     for (const id in trains) {
-        // 30초 이상 신호 없으면 삭제하되, 바로 응답에서 빼지 말고 
-        // 전체 상태를 유지하다가 정리함
-        if (now - trains[id].lastSeen < 30000) {
-            activeTrains[id] = trains[id];
-        } else {
+        if (now - trains[id].lastSeen > 30000) { // 30초 간 통신 두절 시 자동 제거
             delete trains[id];
         }
     }
-    res.json(activeTrains); 
+    res.json({ trains: trains, logs: [] }); // 감사로그 틀 보존
 });
 
-
+// [API] 제한 속도 변경 명령
+app.post('/api/web-speedlimit', (req, res) => {
+    const { trainId, speedLimit } = req.body;
+    if (trains[trainId]) {
+        trains[trainId].SpeedLimit = parseInt(speedLimit) || 30;
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: "열차를 찾을 수 없습니다." });
+    }
+});
 
 // [API] 원격 비상 정지 명령
 app.post('/api/web-emergency', (req, res) => {
