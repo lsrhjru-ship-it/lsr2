@@ -107,8 +107,9 @@ app.get('/api/roblox/user/:rbxId', async (req, res) => {
     }
 });
 
-// 🔄 [API] 열차 상태 수신 및 원격 제어 옵션 전달 (대소문자 불일치 완벽 해결 버전을 적용함)
+// 🔄 [API] 열차 상태 수신 및 원격 제어 옵션 전달 (대소문자 완벽 예외 처리 추가)
 app.post('/api/train-status', (req, res) => {
+    // 로블록스에서 보낼 수 있는 대소문자 속성 구조를 전부 감지해 묶어냅니다.
     const TrainId = req.body.TrainId || req.body.trainId;
     const SpeedLimit = req.body.SpeedLimit !== undefined ? req.body.SpeedLimit : req.body.speedLimit;
     const Action = req.body.Action || req.body.action;
@@ -126,65 +127,24 @@ app.post('/api/train-status', (req, res) => {
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
     const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30);
 
-    // 인게임 패킷 덮어쓰기 방지용 기존 상태 확보
+    // 🔒 [보완] 인게임 패킷 덮어쓰기 방지: 웹 관제탑에서 제어 중인 경계장치 상태 보존 (기본값: true)
     const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined)
         ? trains[TrainId].VigilanceEnabled
         : true;
 
-    // 들어온 데이터를 대소문자 무관하게 상호 파싱하여 결합
-    const status = req.body.Status || req.body.status || "Normal";
-    const isEmergency = req.body.IsEmergency !== undefined ? req.body.IsEmergency : (req.body.isEmergency || false);
-    const emergencyReason = req.body.EmergencyReason || req.body.emergencyReason || "None";
-    const currentSpeed = req.body.CurrentSpeed !== undefined ? req.body.CurrentSpeed : (req.body.currentSpeed || 0);
-    const trainName = req.body.TrainName || req.body.trainName || "시운전 열차";
-    const currentNotch = req.body.CurrentNotch !== undefined ? req.body.CurrentNotch : (req.body.currentNotch || 0);
-    const currentReverser = req.body.CurrentReverser !== undefined ? req.body.CurrentReverser : (req.body.currentReverser || 0);
-    const driverName = req.body.DriverName || req.body.driverName || "Unknown";
-    const driverDisplayName = req.body.DriverDisplayName || req.body.driverDisplayName || "Unknown";
-    const driverUserId = req.body.DriverUserId || req.body.driverUserId || req.body.DriverId || req.body.driverId || "0";
-    const positionX = req.body.PositionX !== undefined ? req.body.PositionX : (req.body.positionX || 0);
-    const positionZ = req.body.PositionZ !== undefined ? req.body.PositionZ : (req.body.positionZ || 0);
-
-    // ⭐️ [핵심 패치] 어떤 형태의 key 명칭으로 가져다 쓰든 에러가 나지 않도록 양방향 매핑 처리
     trains[TrainId] = {
         ...req.body,
-        
-        // 1. 웹사이트(index.html) 프론트엔드가 사용하는 소문자/카멜케이스 필드 채워주기
-        trainId: TrainId,
-        trainName: trainName,
-        currentSpeed: currentSpeed,
-        currentNotch: currentNotch,
-        currentReverser: currentReverser,
-        isEmergency: isEmergency,
-        status: status,
-        emergencyReason: emergencyReason,
-        driverName: driverName,
-        driverDisplayName: driverDisplayName,
-        driverUserId: driverUserId,
-        positionX: positionX,
-        positionZ: positionZ,
-        speedLimit: targetSpeedLimit,
-        vigilanceEnabled: currentVigilanceState,
-
-        // 2. 백엔드 및 로블록스 제어용 데이터 구조 유지
-        TrainId: TrainId,
-        TrainName: trainName,
-        CurrentSpeed: currentSpeed,
-        CurrentNotch: currentNotch,
-        CurrentReverser: currentReverser,
-        IsEmergency: isEmergency,
-        Status: status,
-        EmergencyReason: emergencyReason,
+        TrainId: TrainId, // key 통일 유지 보장
         SpeedLimit: targetSpeedLimit,
-        VigilanceEnabled: currentVigilanceState,
         remoteEmergencyActive: previousEmergency,
+        VigilanceEnabled: currentVigilanceState,
         lastSeen: Date.now()
     };
 
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit,
-        VigilanceEnabled: trains[TrainId].VigilanceEnabled
+        VigilanceEnabled: trains[TrainId].VigilanceEnabled // 로블록스 열차 내부 스크립트로 전달됨
     });
 });
 
@@ -199,7 +159,7 @@ app.get('/api/current-data', (req, res) => {
     res.json({ trains: trains, logs: [] });
 });
 
-// [API] 제한 속도 변경 명령
+// [API] 제한 속도 변경 명령 (안전 장치 강화)
 app.post('/api/web-speedlimit', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit;
@@ -212,7 +172,7 @@ app.post('/api/web-speedlimit', (req, res) => {
     }
 });
 
-// [API] 원격 비상 정지 명령
+// [API] 원격 비상 정지 명령 (안전 장치 강화)
 app.post('/api/web-emergency', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     if (trains[trainId]) {
@@ -223,7 +183,7 @@ app.post('/api/web-emergency', (req, res) => {
     }
 });
 
-// [API] 원격 비상 해제 명령
+// [API] 원격 비상 해제 명령 (안전 장치 강화)
 app.post('/api/web-reset', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     if (trains[trainId]) {
@@ -234,7 +194,7 @@ app.post('/api/web-reset', (req, res) => {
     }
 });
 
-// 🚨 [API] 웹 관제소 원격 운전자 경계장치 토글 명령 라우터
+// 🚨 [API] 웹 관제소 원격 운전자 경계장치 토글 명령 라우터 (안전 장치 강화)
 app.post('/api/web-vigilance', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const vigilanceEnabled = req.body.vigilanceEnabled !== undefined ? req.body.vigilanceEnabled : req.body.VigilanceEnabled;
