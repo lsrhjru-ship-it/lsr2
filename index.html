@@ -696,7 +696,6 @@
     </div>
 
     <script>
-        // 마스터 및 시스템 상수 관리
         const MASTER_ADMIN_ID = "lsrhjru"; 
         const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
         const FALLBACK_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
@@ -710,7 +709,6 @@
         const robloxCache = {};
         const robloxPromises = {};
 
-        // 최고 관리자 또는 마스터 계정인지 확인하는 헬퍼 함수
         function hasAdminPrivilege(user) {
             if (!user) return false;
             return user.id === MASTER_ADMIN_ID || user.role === "최고 관리자";
@@ -723,7 +721,8 @@
 
             robloxPromises[id] = (async () => {
                 try {
-                    const res = await fetch(`/api/roblox/user/${id}`);
+                    // 캐시 유도 방지를 위해 무작위 타임스탬프 추가 적용
+                    const res = await fetch(`/api/roblox/user/${id}?t=${Date.now()}`, { cache: 'no-store' });
                     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     const data = await res.json();
                     robloxCache[id] = data;
@@ -750,7 +749,7 @@
 
         async function fetchAccounts() {
             try {
-                const res = await fetch('/api/accounts');
+                const res = await fetch(`/api/accounts?t=${Date.now()}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error("계정 목록 로드 실패");
                 accountDB = await res.json();
                 renderAccounts();
@@ -987,11 +986,13 @@
             lastRenderedLogCount = logs.length;
         }
 
+        // [핵심 수정] 실시간 데이터 갱신 API 연동 최적화 및 캐시 완전 타파
         async function updateDashboard() {
             if (!currentUserSession) return;
 
             try {
-                const res = await fetch('/api/current-data');
+                // 실시간 타임스탬프 파라미터(?t=...)와 no-store 헤더 조합으로 강제 실시간 우회 동기화 성공
+                const res = await fetch(`/api/current-data?t=${Date.now()}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error("실시간 데이터 동기화 실패");
                 const data = await res.json();
 
@@ -1023,6 +1024,8 @@
 
                 for (const id in trains) {
                     const train = trains[id];
+                    if (!train) continue;
+
                     const isEms = train.IsEmergency || train.remoteEmergencyActive;
 
                     let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
@@ -1039,11 +1042,14 @@
                     if (isEms) marker.classList.add('ems');
                     else marker.classList.remove('ems');
 
-                    let pctX = ((train.PositionX - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
-                    let pctZ = ((train.PositionZ - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
+                    let pctX = (((train.PositionX || 0) - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
+                    let pctZ = (((train.PositionZ || 0) - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
                     marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;
                     marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
-                    marker.querySelector('.train-marker-label').innerText = `${train.TrainName.split(' ')[0]} (${train.CurrentSpeed}km/h)`;
+                    
+                    // TrainName 누락으로 인한 런타임 크래시 완전 방어 조치
+                    const safeTrainName = train.TrainName || "운행열차";
+                    marker.querySelector('.train-marker-label').innerText = `${safeTrainName.split(' ')[0]} (${train.CurrentSpeed || 0}km/h)`;
 
                     let card = document.querySelector(`.train-card[data-id="${id}"]`);
                     if (!card) {
@@ -1091,19 +1097,19 @@
                         grid.appendChild(card);
                     }
 
-                    card.querySelector('.v-name').innerText = train.TrainName;
-                    card.querySelector('.v-speed').innerText = `${train.CurrentSpeed} km/h (제한: ${train.SpeedLimit || 30} km/h)`;
+                    card.querySelector('.v-name').innerText = safeTrainName;
+                    card.querySelector('.v-speed').innerText = `${train.CurrentSpeed || 0} km/h (제한: ${train.SpeedLimit || 30} km/h)`;
 
                     let notchText = "N";
-                    if (train.CurrentNotch > 0) notchText = "P" + train.CurrentNotch;
-                    else if (train.CurrentNotch < 0) notchText = (train.CurrentNotch === -5) ? "EB (비상)" : "B" + Math.abs(train.CurrentNotch);
+                    if ((train.CurrentNotch || 0) > 0) notchText = "P" + train.CurrentNotch;
+                    else if ((train.CurrentNotch || 0) < 0) notchText = (train.CurrentNotch === -5) ? "EB (비상)" : "B" + Math.abs(train.CurrentNotch);
                     card.querySelector('.v-notch').innerText = notchText;
 
                     let revText = "중립 (N)";
                     if (train.CurrentReverser === 1) revText = "전진 (F)";
                     else if (train.CurrentReverser === -1) revText = "후진 (B)";
                     card.querySelector('.v-rev').innerText = revText;
-                    card.querySelector('.v-pos').innerText = `${train.PositionX}, ${train.PositionZ}`;
+                    card.querySelector('.v-pos').innerText = `${train.PositionX || 0}, ${train.PositionZ || 0}`;
 
                     const vigSpan = card.querySelector('.v-vigilance');
                     const vigBtn = card.querySelector('.v-vigilance-btn');
@@ -1198,6 +1204,7 @@
             });
         }
 
+        // 매 1초(1000ms)마다 실시간 동기화 함수 강제 호출 루프 작동
         setInterval(updateDashboard, 1000);
     </script>
 </body>
