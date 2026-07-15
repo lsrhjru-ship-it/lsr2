@@ -42,6 +42,57 @@ try {
 
 const saveAccounts = () => fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 
+// ============================
+// 🚦 [신규] 열차 간격 기반 자동 ATC 속도제한
+// ============================
+const SPACING_CONFIG = {
+    MIN_LIMIT: 50,       // 앞차와 가까울 때 적용할 최저 속도제한 (km/h)
+    MAX_LIMIT: 80,       // 앞차와 충분히 멀 때 적용할 최고 속도제한 (km/h)
+    NEAR_DISTANCE: 100,  // 이 거리(studs) 이하면 MIN_LIMIT 적용 — 맵 스케일에 맞게 조정하세요
+    FAR_DISTANCE: 500    // 이 거리(studs) 이상이면 MAX_LIMIT 적용 — 맵 스케일에 맞게 조정하세요
+};
+
+// 두 열차 사이 평면(X,Z) 거리
+function getDistance(a, b) {
+    if (a.PositionX === undefined || a.PositionZ === undefined) return Infinity;
+    if (b.PositionX === undefined || b.PositionZ === undefined) return Infinity;
+    const dx = a.PositionX - b.PositionX;
+    const dz = a.PositionZ - b.PositionZ;
+    return Math.sqrt(dx * dx + dz * dz);
+}
+
+// 거리를 50~80km/h 사이로 선형 보간 (소수점 첫째자리까지 정밀 계산)
+function distanceToSpeedLimit(distance) {
+    const { MIN_LIMIT, MAX_LIMIT, NEAR_DISTANCE, FAR_DISTANCE } = SPACING_CONFIG;
+    if (distance <= NEAR_DISTANCE) return MIN_LIMIT;
+    if (distance >= FAR_DISTANCE) return MAX_LIMIT;
+    const ratio = (distance - NEAR_DISTANCE) / (FAR_DISTANCE - NEAR_DISTANCE);
+    const raw = MIN_LIMIT + ratio * (MAX_LIMIT - MIN_LIMIT);
+    return Math.round(raw * 10) / 10;
+}
+
+// 모든 열차를 대상으로 가장 가까운 다른 열차와의 거리에 따라 SpeedLimit을 자동 갱신.
+// 관제원이 수동으로 속도를 지정한 열차(ManualOverride)는 건드리지 않음.
+function applySpacingSpeedLimits() {
+    const ids = Object.keys(trains);
+    for (const id of ids) {
+        const train = trains[id];
+        if (train.ManualOverride) continue;
+
+        let nearestDistance = Infinity;
+        for (const otherId of ids) {
+            if (otherId === id) continue;
+            const dist = getDistance(train, trains[otherId]);
+            if (dist < nearestDistance) nearestDistance = dist;
+        }
+
+        if (nearestDistance !== Infinity) {
+            train.SpeedLimit = distanceToSpeedLimit(nearestDistance);
+            train.NearestTrainDistance = Math.round(nearestDistance * 10) / 10;
+        }
+    }
+}
+
 // ⏱️ API 타임아웃 방지 장치
 async function fetchWithTimeout(url, options = {}, timeout = 1500) {
     const controller = new AbortController();
@@ -197,6 +248,9 @@ app.post('/api/train-status', (req, res) => {
         addLog(`[운전자 교대] [${TrainId}] 운전자가 변경되었습니다. (${oldDriver || '없음'} -> ${newDriver})`);
     }
 
+    // 🚦 좌표가 갱신됐으니 모든 열차의 간격 기반 자동 속도제한을 재계산
+    applySpacingSpeedLimits();
+
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit,
@@ -222,14 +276,21 @@ app.post('/api/web-speedlimit', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit;
     const adminId = req.body.adminId || "시스템";
+    const auto = req.body.auto === true; // true로 보내면 자동(간격 기반) 모드로 복귀
 
-    if (trains[trainId]) {
-        trains[trainId].SpeedLimit = parseInt(speedLimit) || 30;
-        addLog(`[속도 제한] [${trainId}] 속도제한을 ${speedLimit}km/h로 설정했습니다. (관제원: ${adminId})`);
-        res.json({ success: true });
-    } else {
-        res.status(404).json({ error: "열차를 찾을 수 없습니다." });
+    if (!trains[trainId]) {
+        return res.status(404).json({ error: "열차를 찾을 수 없습니다." });
     }
+
+    if (auto) {
+        trains[trainId].ManualOverride = false;
+        addLog(`[속도 제한] [${trainId}] 자동 간격 조절 모드로 전환했습니다. (관제원: ${adminId})`);
+    } else {
+        trains[trainId].SpeedLimit = parseInt(speedLimit) || 30;
+        trains[trainId].ManualOverride = true; // 수동 설정 시 자동 간격 조절에서 제외
+        addLog(`[속도 제한] [${trainId}] 속도제한을 ${speedLimit}km/h로 수동 설정했습니다. (관제원: ${adminId})`);
+    }
+    res.json({ success: true });
 });
 
 // [API] 원격 비상 정지 명령
