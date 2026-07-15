@@ -11,7 +11,7 @@ let logs = []; // 📜 실시간 조작 로그 저장 배열
 const DB_PATH = path.join(__dirname, 'accounts.json');
 
 // 💾 [서버사이드 캐시] 로블록스 유저 정보 임시 저장소
-const robloxCache = {}; 
+const robloxCache = {};
 
 // 실시간 조작 로그 기록 함수 (최대 30개 유지)
 function addLog(message) {
