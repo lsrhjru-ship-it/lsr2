@@ -282,7 +282,7 @@
             width: 100%;
             height: 420px;
             background: #010409;
-            background-image: url(''); 
+            background-image: url('');
             background-size: cover;
             background-position: center;
             border-radius: 12px;
@@ -360,13 +360,6 @@
             border-color: var(--primary);
             box-shadow: 0 0 20px rgba(88, 166, 255, 0.15);
             transform: translateY(-3px);
-        }
-
-        /* 비상 정지 상태일 때 카드 전체가 경고 테두리로 깜빡이도록 수정 */
-        .train-card.ems-active {
-            border-color: var(--danger) !important;
-            box-shadow: 0 0 25px var(--danger-glow) !important;
-            animation: card-blink 1s infinite alternate !important;
         }
 
         .card-header {
@@ -474,6 +467,26 @@
             font-size: 11px;
         }
 
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-normal {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-ems {
+            background: rgba(255, 77, 109, 0.15);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            animation: card-blink 1s infinite alternate;
+        }
+
         /* 6. 계정 관리 및 로그 스타일 */
         .card-table-wrap {
             background: var(--panel-bg);
@@ -555,13 +568,11 @@
 
         @keyframes card-blink {
             0% {
-                border-color: rgba(255, 77, 109, 0.2);
-                box-shadow: 0 0 5px rgba(255, 77, 109, 0.1);
+                box-shadow: 0 0 4px var(--danger-glow);
             }
 
             100% {
-                border-color: rgba(255, 77, 109, 1);
-                box-shadow: 0 0 20px rgba(255, 77, 109, 0.5);
+                box-shadow: 0 0 16px var(--danger-glow);
             }
         }
 
@@ -985,12 +996,19 @@
             logs.forEach(log => {
                 const logLine = document.createElement('div');
                 logLine.className = 'log-line';
-                logLine.innerHTML = `<span class="log-time">[${log.timeStr}]</span><span class="log-user">@${log.user}</span> <span style="color:#fff;">${log.message}</span>`;
+                logLine.innerHTML = `<span class="log-time">[${log.timeStr || log.time}]</span><span class="log-user">@${log.user || 'SYSTEM'}</span> <span style="color:#fff;">${log.text || log.message}</span>`;
                 container.appendChild(logLine);
             });
 
             container.scrollTop = container.scrollHeight;
             lastRenderedLogCount = logs.length;
+        }
+
+        // DOM 업데이트 헬퍼 함수 (값이 변경되었을 때만 DOM을 조작하여 렉 방지)
+        function updateTextSafely(element, newText) {
+            if (element && element.innerText !== newText) {
+                element.innerText = newText;
+            }
         }
 
         async function updateDashboard() {
@@ -1020,6 +1038,7 @@
 
                 if (noTrainsMsg) noTrainsMsg.remove();
 
+                // 사라진 열차 UI 삭제
                 document.querySelectorAll('.train-card').forEach(card => {
                     if (!trains[card.dataset.id]) card.remove();
                 });
@@ -1041,6 +1060,9 @@
                     const trainLine = train.Line || train.LineName || "정보 없음";
                     const trainDest = train.Destination || train.DestinationName || "정보 없음";
 
+                    const safeTrainName = typeof train.TrainName === 'string' ? train.TrainName : String(train.TrainName || "운행열차");
+
+                    // 1. 마커 업데이트 최적화
                     let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
                     if (!marker) {
                         marker = document.createElement('div');
@@ -1052,22 +1074,30 @@
                         map.appendChild(marker);
                     }
 
-                    if (isEms) marker.classList.add('ems');
-                    else marker.classList.remove('ems');
+                    if (isEms) {
+                        if (!marker.classList.contains('ems')) marker.classList.add('ems');
+                    } else {
+                        if (marker.classList.contains('ems')) marker.classList.remove('ems');
+                    }
 
                     let pctX = (((posX) - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
                     let pctZ = (((posZ) - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
-                    marker.style.left = `${Math.max(0, Math.min(100, pctX))}%`;
-                    marker.style.top = `${Math.max(0, Math.min(100, pctZ))}%`;
+                    
+                    const newLeft = `${Math.max(0, Math.min(100, pctX))}%`;
+                    const newTop = `${Math.max(0, Math.min(100, pctZ))}%`;
+                    if(marker.style.left !== newLeft) marker.style.left = newLeft;
+                    if(marker.style.top !== newTop) marker.style.top = newTop;
 
-                    const safeTrainName = typeof train.TrainName === 'string' ? train.TrainName : String(train.TrainName || "운행열차");
-                    marker.querySelector('.train-marker-label').innerText = `${safeTrainName.split(' ')[0]} (${speed}km/h)`;
+                    const markerLabel = `${safeTrainName.split(' ')[0]} (${speed}km/h)`;
+                    updateTextSafely(marker.querySelector('.train-marker-label'), markerLabel);
 
+                    // 2. 카드 업데이트 최적화
                     let card = document.querySelector(`.train-card[data-id="${id}"]`);
                     if (!card) {
                         card = document.createElement('div');
                         card.className = 'train-card';
                         card.dataset.id = id;
+                        card.dataset.driverId = ""; // 운전자 변경 추적용 데이터셋 추가
                         card.innerHTML = `
                             <div>
                                 <div class="card-header">
@@ -1080,7 +1110,7 @@
                                 <div class="info-row"><span class="info-label">제어 단수</span><span class="info-value v-notch">N</span></div>
                                 <div class="info-row"><span class="info-label">역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
                                 <div class="info-row"><span class="info-label">현재 좌표 (X, Z)</span><span class="info-value v-pos" style="color:var(--text-muted);">0, 0</span></div>
-                                <div class="info-row" style="margin-bottom:20px;"><span class="info-label">경계장치 상태</span><span class="info-value v-vigilance" style="font-weight:700;">활성화 (정상)</span></div>
+                                <div class="info-row"><span class="info-label">경계장치 상태</span><span class="info-value v-vigilance" style="font-weight:700;">활성화 (정상)</span></div>
                                 <div class="limit-input-zone">
                                     <span style="font-size:13px; font-weight:500;">ATC 제한속도 변경</span>
                                     <div>
@@ -1089,6 +1119,10 @@
                                                onblur="setTimeout(() => { this.dataset.editing='false'; }, 500)">
                                         <button class="btn-sm btn btn-primary" style="padding:6px 10px; display:inline-block;" onclick="setSpeedLimit('${id}', this)"><i class="fa-solid fa-check"></i></button>
                                     </div>
+                                </div>
+                                <div class="info-row" style="align-items:center; margin-top:15px;">
+                                    <span class="info-label">안전 상태</span>
+                                    <span class="status-badge v-badge">정상</span>
                                 </div>
                             </div>
                             <div>
@@ -1109,63 +1143,86 @@
                         grid.appendChild(card);
                     }
 
-                    card.querySelector('.v-name').innerText = safeTrainName;
-                    card.querySelector('.v-speed').innerText = `${speed} km/h (제한: ${speedLimit} km/h)`;
-                    card.querySelector('.v-line').innerText = trainLine;
-                    card.querySelector('.v-destination').innerText = trainDest;
+                    // 텍스트 정보 최적화 반영
+                    updateTextSafely(card.querySelector('.v-name'), safeTrainName);
+                    updateTextSafely(card.querySelector('.v-speed'), `${speed} km/h (제한: ${speedLimit} km/h)`);
+                    updateTextSafely(card.querySelector('.v-line'), trainLine);
+                    updateTextSafely(card.querySelector('.v-destination'), trainDest);
 
                     let notchText = "N";
                     if (notch > 0) notchText = "P" + notch;
                     else if (notch < 0) notchText = (notch === -5) ? "EB (비상)" : "B" + Math.abs(notch);
-                    card.querySelector('.v-notch').innerText = notchText;
+                    updateTextSafely(card.querySelector('.v-notch'), notchText);
 
                     let revText = "중립 (N)";
                     if (reverser === 1) revText = "전진 (F)";
                     else if (reverser === -1) revText = "후진 (B)";
-                    card.querySelector('.v-rev').innerText = revText;
-                    card.querySelector('.v-pos').innerText = `${posX}, ${posZ}`;
+                    updateTextSafely(card.querySelector('.v-rev'), revText);
+                    updateTextSafely(card.querySelector('.v-pos'), `${posX}, ${posZ}`);
 
                     const vigSpan = card.querySelector('.v-vigilance');
                     const vigBtn = card.querySelector('.v-vigilance-btn');
                     const isVigActive = train.VigilanceEnabled !== false;
 
                     if (isVigActive) {
-                        if (vigSpan) { vigSpan.innerText = "작동 중 (정상)"; vigSpan.style.color = "var(--success)"; }
-                        if (vigBtn) {
+                        updateTextSafely(vigSpan, "작동 중 (정상)");
+                        if (vigSpan && vigSpan.style.color !== "var(--success)") vigSpan.style.color = "var(--success)";
+                        if (vigBtn && vigBtn.innerHTML.indexOf("경계 끄기") === -1) {
                             vigBtn.style.background = "#e67e22";
                             vigBtn.innerHTML = "<i class='fa-solid fa-eye-slash'></i> 경계 끄기";
                         }
                     } else {
-                        if (vigSpan) { vigSpan.innerText = "비활성화 (원격)"; vigSpan.style.color = "var(--danger)"; }
-                        if (vigBtn) {
+                        updateTextSafely(vigSpan, "비활성화 (원격)");
+                        if (vigSpan && vigSpan.style.color !== "var(--danger)") vigSpan.style.color = "var(--danger)";
+                        if (vigBtn && vigBtn.innerHTML.indexOf("경계 켜기") === -1) {
                             vigBtn.style.background = "var(--success)";
                             vigBtn.innerHTML = "<i class='fa-solid fa-eye'></i> 경계 켜기";
                         }
                     }
 
+                    // 🔒 Race Condition (씹힘) 방지 로직 보완
+                    // pending 상태(전송 직후)이거나 사용자가 편집 중일 때는 서버 데이터로 덮어씌우지 않음
                     const limitInput = card.querySelector('.limit-input');
-                    if (limitInput && limitInput.dataset.editing !== 'true' && document.activeElement !== limitInput) {
-                        limitInput.value = speedLimit;
+                    if (limitInput && limitInput.dataset.editing !== 'true' && limitInput.dataset.pending !== 'true' && document.activeElement !== limitInput) {
+                        if (limitInput.value !== String(speedLimit)) {
+                            limitInput.value = speedLimit;
+                        }
                     }
 
-                    // 🚨 비상상황 시 카드 테두리 깜빡임 제어
-                    if (isEms) {
-                        card.classList.add('ems-active');
+                    const badge = card.querySelector('.v-badge');
+                    if (train.remoteEmergencyActive) {
+                        if (badge.className !== "status-badge status-ems") badge.className = "status-badge status-ems";
+                        updateTextSafely(badge, "원격 강제 제동");
+                    } else if (train.IsEmergency || train.Emergency) {
+                        if (badge.className !== "status-badge status-ems") badge.className = "status-badge status-ems";
+                        updateTextSafely(badge, "과속/비상 체결");
                     } else {
-                        card.classList.remove('ems-active');
+                        if (badge.className !== "status-badge status-normal") badge.className = "status-badge status-normal";
+                        updateTextSafely(badge, "정상 신호 운영");
                     }
 
+                    // 🚀 로블록스 아바타 무한 로딩 렉 방지 (운전자가 바뀔 때만 통신)
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
-                    getRobloxProfile(targetUserId).then(profile => {
-                        const avatarImg = card.querySelector('.v-avatar');
+                    if (card.dataset.driverId !== String(targetUserId)) {
+                        card.dataset.driverId = String(targetUserId); // 현재 운전자 ID 고정
+                        
+                        getRobloxProfile(targetUserId).then(profile => {
+                            const avatarImg = card.querySelector('.v-avatar');
+                            const nameSpan = card.querySelector('.v-driver');
+                            if (avatarImg && avatarImg.src !== profile.avatarUrl) {
+                                avatarImg.src = profile.avatarUrl;
+                            }
+                            if (nameSpan) {
+                                nameSpan.innerText = train.DriverName || profile.username;
+                            }
+                        });
+                    } else {
+                        // ID는 같지만 로블록스 내부에서 이름만 갱신된 경우 처리
                         const nameSpan = card.querySelector('.v-driver');
-                        if (avatarImg && avatarImg.src !== profile.avatarUrl) {
-                            avatarImg.src = profile.avatarUrl;
+                        if (nameSpan && train.DriverName) {
+                            updateTextSafely(nameSpan, train.DriverName);
                         }
-                        if (nameSpan) {
-                            nameSpan.innerText = train.DriverName || profile.username;
-                        }
-                    });
+                    }
                 }
             } catch (e) {
                 console.error("대시보드 동기화 오류...", e);
@@ -1177,11 +1234,19 @@
             const inputVal = parseInt(inputField.value);
             if (isNaN(inputVal) || inputVal < 0) return alert("올바른 속도를 입력하세요.");
 
-            await fetch('/api/web-speedlimit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ trainId: trainId, speedLimit: inputVal, adminId: currentUserSession.id })
-            });
+            // 🌟 폼 덮어쓰기 방지 (보호 모드 2초 유지)
+            inputField.dataset.pending = 'true';
+            setTimeout(() => { inputField.dataset.pending = 'false'; }, 2000);
+
+            try {
+                await fetch('/api/web-speedlimit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ trainId: trainId, speedLimit: inputVal, adminId: currentUserSession.id })
+                });
+            } catch (e) {
+                console.error("속도 제한 전송 실패", e);
+            }
         }
 
         async function triggerEmergency(trainId) {
