@@ -43,6 +43,62 @@ try {
 const saveAccounts = () => fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
 
 // ============================
+// 🗺️ [신규] 실제 선로 레이아웃 저장소
+// ============================
+const TRACK_PATH = path.join(__dirname, 'track.json');
+let trackLayout = { segments: [], bounds: null, updatedAt: null };
+try {
+    if (fs.existsSync(TRACK_PATH)) {
+        trackLayout = JSON.parse(fs.readFileSync(TRACK_PATH, 'utf-8'));
+    }
+} catch (e) {
+    trackLayout = { segments: [], bounds: null, updatedAt: null };
+}
+
+// [API] 선로 레이아웃 조회 (웹 대시보드가 지도에 그릴 때 사용)
+app.get('/api/track-layout', (req, res) => {
+    res.json(trackLayout);
+});
+
+// [API] 선로 레이아웃 업로드 (로블록스 수집 스크립트가 1회성으로 호출)
+app.post('/api/track-layout', (req, res) => {
+    const segments = req.body.segments;
+    if (!Array.isArray(segments) || segments.length === 0) {
+        return res.status(400).json({ error: "segments 배열이 비어있거나 올바르지 않습니다." });
+    }
+
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const seg of segments) {
+        const points = [[seg.x1, seg.z1], [seg.x2, seg.z2]];
+        for (const [x, z] of points) {
+            if (typeof x !== 'number' || typeof z !== 'number') continue;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
+        }
+    }
+
+    if (minX === Infinity) {
+        return res.status(400).json({ error: "유효한 좌표가 없습니다." });
+    }
+
+    // 여백 5% 추가 (선로가 지도 가장자리에 딱 붙지 않도록)
+    const padX = Math.max((maxX - minX) * 0.05, 50);
+    const padZ = Math.max((maxZ - minZ) * 0.05, 50);
+
+    trackLayout = {
+        segments,
+        bounds: { minX: minX - padX, maxX: maxX + padX, minZ: minZ - padZ, maxZ: maxZ + padZ },
+        updatedAt: Date.now()
+    };
+
+    fs.writeFileSync(TRACK_PATH, JSON.stringify(trackLayout, null, 2));
+    addLog(`[선로 데이터] 선로 레이아웃이 갱신되었습니다. (구간 ${segments.length}개)`);
+    res.json({ success: true, count: segments.length, bounds: trackLayout.bounds });
+});
+
+// ============================
 // 🚦 [신규] 열차 간격 기반 자동 ATC 속도제한
 // ============================
 const SPACING_CONFIG = {
