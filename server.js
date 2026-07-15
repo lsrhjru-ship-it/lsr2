@@ -107,34 +107,41 @@ app.get('/api/roblox/user/:rbxId', async (req, res) => {
     }
 });
 
-// 🔄 [API] 열차 상태 수신 및 원격 제어 옵션 전달 (대소문자 완벽 예외 처리 추가)
+// 🔄 [API] 열차 상태 수신 및 원격 제어 옵션 전달 (운전자 변경 시 새로운 차량으로 인식)
 app.post('/api/train-status', (req, res) => {
-    // 로블록스에서 보낼 수 있는 대소문자 속성 구조를 전부 감지해 묶어냅니다.
-    const TrainId = req.body.TrainId || req.body.trainId;
+    const rawTrainId = req.body.TrainId || req.body.trainId;
+    const driverId = req.body.DriverId || req.body.driverId || "none";
     const SpeedLimit = req.body.SpeedLimit !== undefined ? req.body.SpeedLimit : req.body.speedLimit;
     const Action = req.body.Action || req.body.action;
 
-    if (!TrainId) {
+    if (!rawTrainId) {
         return res.status(400).json({ error: "TrainId가 누락되었습니다." });
     }
 
-    // 세션 파괴 호출 시 신속 삭제
+    // 세션 파괴 호출 시 물리적 기차(rawTrainId)에서 파생된 모든 데이터 일괄 삭제
     if (Action === "DELETE" || Action === "delete") {
-        delete trains[TrainId];
+        for (let key in trains) {
+            if (key.startsWith(rawTrainId + "_")) {
+                delete trains[key];
+            }
+        }
         return res.json({ success: true, message: "열차가 정상 제거되었습니다." });
     }
+
+    // [핵심 변경] 기차 ID와 운전자 ID를 결합하여 운전자가 바뀌면 새로운 카드가 생기도록 강제 분리
+    const TrainId = `${rawTrainId}_${driverId}`;
 
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
     const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30);
 
-    // 🔒 [보완] 인게임 패킷 덮어쓰기 방지: 웹 관제탑에서 제어 중인 경계장치 상태 보존 (기본값: true)
     const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined)
         ? trains[TrainId].VigilanceEnabled
         : true;
 
     trains[TrainId] = {
         ...req.body,
-        TrainId: TrainId, // key 통일 유지 보장
+        TrainId: TrainId, // 프론트엔드가 제어 시 이 결합된 ID를 사용
+        OriginalTrainId: rawTrainId, // 프론트엔드 표기용 원본 ID
         SpeedLimit: targetSpeedLimit,
         remoteEmergencyActive: previousEmergency,
         VigilanceEnabled: currentVigilanceState,
@@ -144,7 +151,7 @@ app.post('/api/train-status', (req, res) => {
     res.json({
         RemoteEmergency: trains[TrainId].remoteEmergencyActive,
         SpeedLimit: trains[TrainId].SpeedLimit,
-        VigilanceEnabled: trains[TrainId].VigilanceEnabled // 로블록스 열차 내부 스크립트로 전달됨
+        VigilanceEnabled: trains[TrainId].VigilanceEnabled 
     });
 });
 
@@ -159,7 +166,7 @@ app.get('/api/current-data', (req, res) => {
     res.json({ trains: trains, logs: [] });
 });
 
-// [API] 제한 속도 변경 명령 (안전 장치 강화)
+// [API] 제한 속도 변경 명령
 app.post('/api/web-speedlimit', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit;
@@ -172,7 +179,7 @@ app.post('/api/web-speedlimit', (req, res) => {
     }
 });
 
-// [API] 원격 비상 정지 명령 (안전 장치 강화)
+// [API] 원격 비상 정지 명령
 app.post('/api/web-emergency', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     if (trains[trainId]) {
@@ -183,7 +190,7 @@ app.post('/api/web-emergency', (req, res) => {
     }
 });
 
-// [API] 원격 비상 해제 명령 (안전 장치 강화)
+// [API] 원격 비상 해제 명령
 app.post('/api/web-reset', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     if (trains[trainId]) {
@@ -194,7 +201,7 @@ app.post('/api/web-reset', (req, res) => {
     }
 });
 
-// 🚨 [API] 웹 관제소 원격 운전자 경계장치 토글 명령 라우터 (안전 장치 강화)
+// 🚨 [API] 웹 관제소 원격 운전자 경계장치 토글 명령
 app.post('/api/web-vigilance', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const vigilanceEnabled = req.body.vigilanceEnabled !== undefined ? req.body.vigilanceEnabled : req.body.VigilanceEnabled;
