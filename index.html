@@ -362,6 +362,13 @@
             transform: translateY(-3px);
         }
 
+        /* 비상 정지 상태일 때 카드 전체가 경고 테두리로 깜빡이도록 수정 */
+        .train-card.ems-active {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 25px var(--danger-glow) !important;
+            animation: card-blink 1s infinite alternate !important;
+        }
+
         .card-header {
             display: flex;
             justify-content: space-between;
@@ -406,7 +413,7 @@
             background: rgba(0, 0, 0, 0.2);
             padding: 10px 14px;
             border-radius: 8px;
-            margin: 10px 0;
+            margin: 15px 0;
             border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
@@ -465,34 +472,6 @@
             flex: 1;
             padding: 10px 4px;
             font-size: 11px;
-        }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 700;
-            text-align: center;
-        }
-
-        /* 🚥 운행 상태별 색상 테마 */
-        .status-normal {
-            background: rgba(46, 204, 113, 0.15);
-            color: var(--success);
-            border: 1px solid var(--success);
-        }
-
-        .status-special {
-            background: rgba(0, 242, 254, 0.15);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-
-        .status-ems {
-            background: rgba(255, 77, 109, 0.15);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-            animation: card-blink 1s infinite alternate;
         }
 
         /* 6. 계정 관리 및 로그 스타일 */
@@ -576,11 +555,13 @@
 
         @keyframes card-blink {
             0% {
-                box-shadow: 0 0 4px var(--danger-glow);
+                border-color: rgba(255, 77, 109, 0.2);
+                box-shadow: 0 0 5px rgba(255, 77, 109, 0.1);
             }
 
             100% {
-                box-shadow: 0 0 16px var(--danger-glow);
+                border-color: rgba(255, 77, 109, 1);
+                box-shadow: 0 0 20px rgba(255, 77, 109, 0.5);
             }
         }
 
@@ -1052,15 +1033,13 @@
 
                     const speed = typeof train.CurrentSpeed !== 'undefined' ? train.CurrentSpeed : (train.Speed || 0);
                     const speedLimit = typeof train.SpeedLimit !== 'undefined' ? train.SpeedLimit : (train.Limit || 30);
+                    const isEms = train.IsEmergency || train.Emergency || train.remoteEmergencyActive;
                     const posX = typeof train.PositionX !== 'undefined' ? train.PositionX : (train.X || 0);
                     const posZ = typeof train.PositionZ !== 'undefined' ? train.PositionZ : (train.Z || 0);
                     const notch = typeof train.CurrentNotch !== 'undefined' ? train.CurrentNotch : (train.Notch || 0);
                     const reverser = typeof train.CurrentReverser !== 'undefined' ? train.CurrentReverser : (train.Reverser || 0);
                     const trainLine = train.Line || train.LineName || "정보 없음";
                     const trainDest = train.Destination || train.DestinationName || "정보 없음";
-
-                    // 🚥 관제사 지정 운행 상태값 바인딩 (기본값: 정상운행)
-                    const opStatus = train.OperationStatus || train.Status || "정상운행";
 
                     let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
                     if (!marker) {
@@ -1073,8 +1052,7 @@
                         map.appendChild(marker);
                     }
 
-                    // 비상운행 시 마커 깜빡임 활성화
-                    if (opStatus === "비상운행") marker.classList.add('ems');
+                    if (isEms) marker.classList.add('ems');
                     else marker.classList.remove('ems');
 
                     let pctX = (((posX) - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
@@ -1102,8 +1080,7 @@
                                 <div class="info-row"><span class="info-label">제어 단수</span><span class="info-value v-notch">N</span></div>
                                 <div class="info-row"><span class="info-label">역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
                                 <div class="info-row"><span class="info-label">현재 좌표 (X, Z)</span><span class="info-value v-pos" style="color:var(--text-muted);">0, 0</span></div>
-                                <div class="info-row"><span class="info-label">경계장치 상태</span><span class="info-value v-vigilance" style="font-weight:700;">활성화 (정상)</span></div>
-                                
+                                <div class="info-row" style="margin-bottom:20px;"><span class="info-label">경계장치 상태</span><span class="info-value v-vigilance" style="font-weight:700;">활성화 (정상)</span></div>
                                 <div class="limit-input-zone">
                                     <span style="font-size:13px; font-weight:500;">ATC 제한속도 변경</span>
                                     <div>
@@ -1112,21 +1089,6 @@
                                                onblur="setTimeout(() => { this.dataset.editing='false'; }, 500)">
                                         <button class="btn-sm btn btn-primary" style="padding:6px 10px; display:inline-block;" onclick="setSpeedLimit('${id}', this)"><i class="fa-solid fa-check"></i></button>
                                     </div>
-                                </div>
-
-                                <!-- 🚥 운행 상태 제어 컨트롤 추가 -->
-                                <div class="limit-input-zone" style="margin-top: 10px;">
-                                    <span style="font-size:13px; font-weight:500;">운행 상태 변경</span>
-                                    <select class="status-select" onchange="setOperationStatus('${id}', this)" style="background: #010409; border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-                                        <option value="정상운행">정상운행</option>
-                                        <option value="특수운전">특수운전</option>
-                                        <option value="비상운행">비상운행</option>
-                                    </select>
-                                </div>
-
-                                <div class="info-row" style="align-items:center; margin-top:15px;">
-                                    <span class="info-label">운행 상태</span>
-                                    <span class="status-badge v-badge">정상운행</span>
                                 </div>
                             </div>
                             <div>
@@ -1186,24 +1148,11 @@
                         limitInput.value = speedLimit;
                     }
 
-                    // 🚥 운행 상태 셀렉트 박스 및 상태 배지 렌더링 동기화
-                    const statusSelect = card.querySelector('.status-select');
-                    if (statusSelect && document.activeElement !== statusSelect) {
-                        statusSelect.value = opStatus;
-                    }
-
-                    const badge = card.querySelector('.v-badge');
-                    if (badge) {
-                        badge.innerText = opStatus;
-                        if (opStatus === "정상운행") {
-                            badge.className = "status-badge v-badge status-normal";
-                        } else if (opStatus === "특수운전") {
-                            badge.className = "status-badge v-badge status-special";
-                        } else if (opStatus === "비상운행") {
-                            badge.className = "status-badge v-badge status-ems";
-                        } else {
-                            badge.className = "status-badge v-badge status-normal";
-                        }
+                    // 🚨 비상상황 시 카드 테두리 깜빡임 제어
+                    if (isEms) {
+                        card.classList.add('ems-active');
+                    } else {
+                        card.classList.remove('ems-active');
                     }
 
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
@@ -1232,16 +1181,6 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ trainId: trainId, speedLimit: inputVal, adminId: currentUserSession.id })
-            });
-        }
-
-        // 🚥 관제원 운행 상태 원격 전송 함수 추가
-        async function setOperationStatus(trainId, selectObj) {
-            const statusVal = selectObj.value;
-            await fetch('/api/web-status', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ trainId: trainId, status: statusVal, adminId: currentUserSession.id })
             });
         }
 
