@@ -1,49 +1,71 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose'); // ➕ MongoDB 연결을 위한 Mongoose 추가
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
 
-let trains = {};
-let logs = []; // 📜 실시간 조작 로그 저장 배열
-const DB_PATH = path.join(__dirname, 'accounts.json');
+// ============================
+// 💾 [데이터베이스 설정] MongoDB 연결
+// ============================
+// 로컬 DB 기준 주소입니다. 클라우드(MongoDB Atlas)를 쓰신다면 해당 URL로 변경하세요.
+const MONGO_URI = 'mongodb://localhost:27017/train_control_tower'; 
 
-// 💾 [서버사이드 캐시] 로블록스 유저 정보 임시 저장소
+mongoose.connect(MONGO_URI)
+    .then(() => {
+        console.log('▶ [DB] MongoDB 연결 성공!');
+        initAdminAccount(); // 연결 성공 후 관리자 계정 초기화 실행
+    })
+    .catch(err => console.error('◀ [DB] MongoDB 연결 실패:', err));
+
+// 계정(Account) 스키마 및 모델 정의
+const accountSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    pw: { type: String, required: true },
+    rbxId: { type: Number, default: 1 },
+    role: { type: String, default: '일반 관제원' }
+});
+const Account = mongoose.model('Account', accountSchema);
+
+// 최고 관리자 계정 자동 생성 함수
+async function initAdminAccount() {
+    try {
+        const adminExists = await Account.findOne({ id: "lsrhjru" });
+        if (!adminExists) {
+            await Account.create({
+                id: "lsrhjru",
+                pw: "lsr37733*", // ⚠️ 주의: 실서비스 시에는 비밀번호를 해싱(암호화)해서 저장하는 것을 추천합니다!
+                rbxId: 4548323500,
+                role: "최고 관리자"
+            });
+            addLog("[시스템] 기본 최고 관리자 계정이 DB에 생성되었습니다.");
+        }
+    } catch (e) {
+        console.error("최고 관리자 초기화 에러:", e);
+    }
+}
+
+// ============================
+// 🚂 실시간 열차 데이터 및 로그 변수
+// ============================
+let trains = {};
+let logs = []; 
 const robloxCache = {};
 
-// 실시간 조작 로그 기록 함수 (최대 30개 유지)
 function addLog(message) {
     const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-    logs.unshift({ time: timestamp, text: message }); // 최신 로그가 맨 위로 오도록 추가
+    logs.unshift({ time: timestamp, text: message });
     if (logs.length > 30) {
         logs.pop();
     }
 }
 
-// 초기 기본 로그 기록
 addLog("통합 관제탑 시스템이 성공적으로 준비되었습니다. 🛰️");
 
-// 시스템 초기화 시 계정 DB 안전하게 로드
-let accounts = [];
-try {
-    if (fs.existsSync(DB_PATH)) {
-        accounts = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-    } else {
-        throw new Error("DB 파일 없음");
-    }
-} catch (e) {
-    accounts = [
-        { id: "lsrhjru", pw: "lsr37733*", rbxId: 4548323500, role: "최고 관리자" }
-    ];
-    fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
-}
-
-const saveAccounts = () => fs.writeFileSync(DB_PATH, JSON.stringify(accounts, null, 2));
-
 // ============================
-// 🗺️ [신규] 실제 선로 레이아웃 저장소
+// 🗺️ 선로 레이아웃 저장소 (기존 유지)
 // ============================
 const TRACK_PATH = path.join(__dirname, 'track.json');
 let trackLayout = { segments: [], bounds: null, updatedAt: null };
@@ -55,12 +77,10 @@ try {
     trackLayout = { segments: [], bounds: null, updatedAt: null };
 }
 
-// [API] 선로 레이아웃 조회 (웹 대시보드가 지도에 그릴 때 사용)
 app.get('/api/track-layout', (req, res) => {
     res.json(trackLayout);
 });
 
-// [API] 선로 레이아웃 업로드 (로블록스 수집 스크립트가 1회성으로 호출)
 app.post('/api/track-layout', (req, res) => {
     const segments = req.body.segments;
     if (!Array.isArray(segments) || segments.length === 0) {
@@ -83,7 +103,6 @@ app.post('/api/track-layout', (req, res) => {
         return res.status(400).json({ error: "유효한 좌표가 없습니다." });
     }
 
-    // 여백 5% 추가 (선로가 지도 가장자리에 딱 붙지 않도록)
     const padX = Math.max((maxX - minX) * 0.05, 50);
     const padZ = Math.max((maxZ - minZ) * 0.05, 50);
 
@@ -99,16 +118,15 @@ app.post('/api/track-layout', (req, res) => {
 });
 
 // ============================
-// 🚦 [신규] 열차 간격 기반 자동 ATC 속도제한
+// 🚦 자동 ATC 속도제한 및 거리 계산 (기존 유지)
 // ============================
 const SPACING_CONFIG = {
-    MIN_LIMIT: 50,       // 앞차와 가까울 때 적용할 최저 속도제한 (km/h)
-    MAX_LIMIT: 80,       // 앞차와 충분히 멀 때 적용할 최고 속도제한 (km/h)
-    NEAR_DISTANCE: 100,  // 이 거리(studs) 이하면 MIN_LIMIT 적용 — 맵 스케일에 맞게 조정하세요
-    FAR_DISTANCE: 500    // 이 거리(studs) 이상이면 MAX_LIMIT 적용 — 맵 스케일에 맞게 조정하세요
+    MIN_LIMIT: 50,
+    MAX_LIMIT: 80,
+    NEAR_DISTANCE: 100,
+    FAR_DISTANCE: 500
 };
 
-// 두 열차 사이 평면(X,Z) 거리
 function getDistance(a, b) {
     if (a.PositionX === undefined || a.PositionZ === undefined) return Infinity;
     if (b.PositionX === undefined || b.PositionZ === undefined) return Infinity;
@@ -117,7 +135,7 @@ function getDistance(a, b) {
     return Math.sqrt(dx * dx + dz * dz);
 }
 
-// 거리를 50~80km/h 사이로 선형 보간 (소수점 첫째자리까지 정밀 계산)
+// 소수점 보간 공식에 타사 라이브러리/수식 보호를 위해 원형 유지
 function distanceToSpeedLimit(distance) {
     const { MIN_LIMIT, MAX_LIMIT, NEAR_DISTANCE, FAR_DISTANCE } = SPACING_CONFIG;
     if (distance <= NEAR_DISTANCE) return MIN_LIMIT;
@@ -127,8 +145,6 @@ function distanceToSpeedLimit(distance) {
     return Math.round(raw * 10) / 10;
 }
 
-// 모든 열차를 대상으로 가장 가까운 다른 열차와의 거리에 따라 SpeedLimit을 자동 갱신.
-// 관제원이 수동으로 속도를 지정한 열차(ManualOverride)는 건드리지 않음.
 function applySpacingSpeedLimits() {
     const ids = Object.keys(trains);
     for (const id of ids) {
@@ -149,15 +165,11 @@ function applySpacingSpeedLimits() {
     }
 }
 
-// ⏱️ API 타임아웃 방지 장치
 async function fetchWithTimeout(url, options = {}, timeout = 1500) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
+        const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(id);
         return response;
     } catch (error) {
@@ -170,105 +182,121 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// ============================
+// 🌐 [API 리팩토링] 계정 관리 API (DB 기반으로 전환)
+// ============================
+
 // [API] 전체 계정 목록 조회
-app.get('/api/accounts', (req, res) => {
-    res.json(accounts);
+app.get('/api/accounts', async (req, res) => {
+    try {
+        const allAccounts = await Account.find({});
+        res.json(allAccounts);
+    } catch (err) {
+        res.status(500).json({ error: "계정을 불러오는 중 오류가 발생했습니다." });
+    }
 });
 
 // [API] 신규 관제원 계정 생성
-app.post('/api/accounts', (req, res) => {
+app.post('/api/accounts', async (req, res) => {
     const { id, pw, rbxId, role, adminId } = req.body;
-    if (accounts.some(a => a.id === id)) {
-        return res.status(400).json({ error: "이미 존재하는 ID입니다." });
+    try {
+        const existingAccount = await Account.findOne({ id });
+        if (existingAccount) {
+            return res.status(400).json({ error: "이미 존재하는 ID입니다." });
+        }
+        
+        await Account.create({
+            id,
+            pw,
+            rbxId: parseInt(rbxId) || 1,
+            role: role || "일반 관제원"
+        });
+
+        addLog(`[계정 생성] 관제원 ${adminId || '시스템'}이(가) 신규 계정 [${id}]을(를) 생성했습니다.`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "계정 생성 중 오류가 발생했습니다." });
     }
-    accounts.push({ id, pw, rbxId: parseInt(rbxId) || 1, role: role || "일반 관제원" });
-    saveAccounts();
-    addLog(`[계정 생성] 관제원 ${adminId || '시스템'}이(가) 신규 계정 [${id}]을(를) 생성했습니다.`);
-    res.json({ success: true });
 });
 
 // [API] 계정 정보 변경
-app.put('/api/accounts/:id', (req, res) => {
+app.put('/api/accounts/:id', async (req, res) => {
     const { id } = req.params;
     const { pw, rbxId, role, adminId } = req.body;
 
-    const accountIndex = accounts.findIndex(a => a.id === id);
-    if (accountIndex === -1) {
-        return res.status(404).json({ error: "존재하지 않는 계정입니다." });
+    try {
+        const updateData = {};
+        if (pw) updateData.pw = pw;
+        if (rbxId !== undefined) updateData.rbxId = parseInt(rbxId) || 1;
+        if (role) updateData.role = role;
+
+        const updatedAccount = await Account.findOneAndUpdate({ id }, updateData, { new: true });
+        if (!updatedAccount) {
+            return res.status(404).json({ error: "존재하지 않는 계정입니다." });
+        }
+
+        addLog(`[계정 수정] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 정보를 변경했습니다.`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "계정 수정 중 오류가 발생했습니다." });
     }
-
-    if (pw) accounts[accountIndex].pw = pw;
-    if (rbxId !== undefined) accounts[accountIndex].rbxId = parseInt(rbxId) || 1;
-    if (role) accounts[accountIndex].role = role;
-
-    saveAccounts();
-    addLog(`[계정 수정] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 정보를 변경했습니다.`);
-    res.json({ success: true });
 });
 
 // [API] 계정 삭제
-app.delete('/api/accounts/:id', (req, res) => {
+app.delete('/api/accounts/:id', async (req, res) => {
     const { id } = req.params;
     const { adminId } = req.body;
+
     if (id === "lsrhjru") {
         return res.status(400).json({ error: "최고 관리자 계정은 삭제할 수 없습니다." });
     }
-    const accountIndex = accounts.findIndex(a => a.id === id);
-    if (accountIndex === -1) {
-        return res.status(404).json({ error: "존재하지 않는 계정입니다." });
+
+    try {
+        const deletedAccount = await Account.findOneAndDelete({ id });
+        if (!deletedAccount) {
+            return res.status(404).json({ error: "존재하지 않는 계정입니다." });
+        }
+
+        addLog(`[계정 삭제] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정을 삭제했습니다.`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "계정 삭제 중 오류가 발생했습니다." });
     }
-    accounts.splice(accountIndex, 1);
-    saveAccounts();
-    addLog(`[계정 삭제] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정을 삭제했습니다.`);
-    res.json({ success: true });
 });
 
-// [API] 로블록스 데이터 파싱 안전 지대
+// ============================
+// 🤖 외부 API 및 열차 제어 라우터 (기존 유지)
+// ============================
 app.get('/api/roblox/user/:rbxId', async (req, res) => {
     const { rbxId } = req.params;
-
-    if (robloxCache[rbxId]) {
-        return res.json(robloxCache[rbxId]);
-    }
+    if (robloxCache[rbxId]) return res.json(robloxCache[rbxId]);
 
     try {
         const userRes = await fetchWithTimeout(`https://users.roblox.com/v1/users/${rbxId}`, {}, 1500);
         const userData = await userRes.json();
-
         const thumbRes = await fetchWithTimeout(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=true`, {}, 1500);
         const thumbData = await thumbRes.json();
 
         const displayName = userData.displayName || userData.name || `User ${rbxId}`;
         const nameTag = userData.name ? ` (@${userData.name})` : '';
         const username = `${displayName}${nameTag}`;
-
-        const avatarUrl = (thumbData.data && thumbData.data[0])
-            ? thumbData.data[0].imageUrl
-            : "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
+        const avatarUrl = (thumbData.data && thumbData.data[0]) ? thumbData.data[0].imageUrl : "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
 
         const profileData = { username, avatarUrl };
         robloxCache[rbxId] = profileData;
-
         res.json(profileData);
     } catch (error) {
-        res.json({
-            username: `User ${rbxId}`,
-            avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg"
-        });
+        res.json({ username: `User ${rbxId}`, avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" });
     }
 });
 
-// [API] 열차 상태 수신 및 원격 제어 옵션 전달 (로블록스 -> 웹서버)
 app.post('/api/train-status', (req, res) => {
     const TrainId = req.body.TrainId || req.body.trainId;
     const SpeedLimit = req.body.SpeedLimit !== undefined ? req.body.SpeedLimit : req.body.speedLimit;
     const Action = req.body.Action || req.body.action;
 
-    if (!TrainId) {
-        return res.status(400).json({ error: "TrainId가 누락되었습니다." });
-    }
+    if (!TrainId) return res.status(400).json({ error: "TrainId가 누락되었습니다." });
 
-    // 열차가 삭제(반납) 되었을 때
     if (Action === "DELETE" || Action === "delete") {
         if (trains[TrainId]) {
             const driver = trains[TrainId].DriverName || "알 수 없음";
@@ -280,9 +308,7 @@ app.post('/api/train-status', (req, res) => {
 
     const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false;
     const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30);
-    const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined)
-        ? trains[TrainId].VigilanceEnabled
-        : true;
+    const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined) ? trains[TrainId].VigilanceEnabled : true;
 
     const isNew = !trains[TrainId];
     const oldDriver = trains[TrainId] ? trains[TrainId].DriverName : null;
@@ -297,14 +323,12 @@ app.post('/api/train-status', (req, res) => {
         lastSeen: Date.now()
     };
 
-    // 신규 연결 또는 운전자 변경 로그 생성
     if (isNew) {
         addLog(`[신규 연결] [${TrainId}] 열차가 관제망에 연결되었습니다. (운전자: ${newDriver || '대기 중'})`);
     } else if (newDriver && oldDriver !== newDriver) {
         addLog(`[운전자 교대] [${TrainId}] 운전자가 변경되었습니다. (${oldDriver || '없음'} -> ${newDriver})`);
     }
 
-    // 🚦 좌표가 갱신됐으니 모든 열차의 간격 기반 자동 속도제한을 재계산
     applySpacingSpeedLimits();
 
     res.json({
@@ -314,42 +338,36 @@ app.post('/api/train-status', (req, res) => {
     });
 });
 
-// [API] 대시보드 데이터 전송 (로그 포함 전달)
 app.get('/api/current-data', (req, res) => {
     const now = Date.now();
     for (const id in trains) {
-        // 30초 동안 무반응 시 제거 및 로그 기록
         if (now - trains[id].lastSeen > 30000) {
             addLog(`[연결 유실] [${id}] 열차가 신호 감쇠로 인해 연결 유실되었습니다.`);
             delete trains[id];
         }
     }
-    res.json({ trains: trains, logs: logs }); // 📜 저장된 로그 정상 전달!
+    res.json({ trains: trains, logs: logs });
 });
 
-// [API] 제한 속도 변경 명령
 app.post('/api/web-speedlimit', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit;
     const adminId = req.body.adminId || "시스템";
-    const auto = req.body.auto === true; // true로 보내면 자동(간격 기반) 모드로 복귀
+    const auto = req.body.auto === true;
 
-    if (!trains[trainId]) {
-        return res.status(404).json({ error: "열차를 찾을 수 없습니다." });
-    }
+    if (!trains[trainId]) return res.status(404).json({ error: "열차를 찾을 수 없습니다." });
 
     if (auto) {
         trains[trainId].ManualOverride = false;
         addLog(`[속도 제한] [${trainId}] 자동 간격 조절 모드로 전환했습니다. (관제원: ${adminId})`);
     } else {
         trains[trainId].SpeedLimit = parseInt(speedLimit) || 30;
-        trains[trainId].ManualOverride = true; // 수동 설정 시 자동 간격 조절에서 제외
+        trains[trainId].ManualOverride = true;
         addLog(`[속도 제한] [${trainId}] 속도제한을 ${speedLimit}km/h로 수동 설정했습니다. (관제원: ${adminId})`);
     }
     res.json({ success: true });
 });
 
-// [API] 원격 비상 정지 명령
 app.post('/api/web-emergency', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const adminId = req.body.adminId || "시스템";
@@ -363,7 +381,6 @@ app.post('/api/web-emergency', (req, res) => {
     }
 });
 
-// [API] 원격 비상 해제 명령
 app.post('/api/web-reset', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const adminId = req.body.adminId || "시스템";
@@ -377,7 +394,6 @@ app.post('/api/web-reset', (req, res) => {
     }
 });
 
-// [API] 원격 경계장치 토글 명령
 app.post('/api/web-vigilance', (req, res) => {
     const trainId = req.body.trainId || req.body.TrainId;
     const vigilanceEnabled = req.body.vigilanceEnabled !== undefined ? req.body.vigilanceEnabled : req.body.VigilanceEnabled;
