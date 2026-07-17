@@ -9,6 +9,7 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🔒 DB의 bcryptjs 암호화 비밀번호 검증용 라이브러리 추가[cite: 3] -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
 
     <style>
@@ -43,7 +44,7 @@
                 radial-gradient(circle at 85% 30%, rgba(0, 242, 254, 0.04), transparent 30%);
         }
 
-        /* 로그인 인증 레이어 */
+        /* 1. 로그인 인증 레이어[cite: 3] */
         #auth-overlay {
             position: fixed;
             top: 0;
@@ -104,7 +105,7 @@
             box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
         }
 
-        /* 좌측 사이드바 */
+        /* 2. 좌측 사이드바[cite: 3] */
         .sidebar {
             width: 280px;
             background: rgba(13, 17, 23, 0.95);
@@ -217,7 +218,7 @@
             background: #27ae60;
         }
 
-        /* 우측 메인 콘텐츠 레이아웃 */
+        /* 3. 우측 메인 콘텐츠 레이아웃[cite: 3] */
         .main-wrapper {
             flex: 1;
             display: flex;
@@ -261,7 +262,7 @@
             display: flex;
         }
 
-        /* 관제 맵 레이아웃 */
+        /* 4. 관제 맵 레이아웃[cite: 3] */
         .map-section {
             background: var(--panel-bg);
             border-radius: 16px;
@@ -283,6 +284,9 @@
             width: 100%;
             height: 420px;
             background: #010409;
+            background-image: url('');
+            background-size: cover;
+            background-position: center;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             position: relative;
@@ -335,7 +339,7 @@
             pointer-events: none;
         }
 
-        /* 열차 현황 카드 */
+        /* 5. 열차 현황 카드 대시보드[cite: 3] */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
@@ -485,7 +489,7 @@
             animation: card-blink 1s infinite alternate;
         }
 
-        /* 계정 관리 및 로그 스타일 */
+        /* 6. 계정 관리 및 로그 스타일[cite: 3] */
         .card-table-wrap {
             background: var(--panel-bg);
             border-radius: 16px;
@@ -568,6 +572,7 @@
             0% {
                 box-shadow: 0 0 4px var(--danger-glow);
             }
+
             100% {
                 box-shadow: 0 0 16px var(--danger-glow);
             }
@@ -577,6 +582,7 @@
             0% {
                 transform: translate(-50%, -50%) scale(0.9);
             }
+
             100% {
                 transform: translate(-50%, -50%) scale(1.2);
             }
@@ -614,9 +620,12 @@
             </div>
         </div>
 
-        <div class="menu-item active" onclick="switchView('dashboard', this)"><i class="fa-solid fa-chart-line"></i> 실시간 통합 관제</div>
-        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)"><i class="fa-solid fa-users-gear"></i> 계정 및 권한 관리</div>
-        <div class="menu-item" onclick="switchView('logs', this)"><i class="fa-solid fa-file-shield"></i> 시스템 감사 로그</div>
+        <div class="menu-item active" onclick="switchView('dashboard', this)"><i class="fa-solid fa-chart-line"></i> 실시간
+            통합 관제</div>
+        <div class="menu-item" id="menu-accounts" onclick="switchView('accounts', this)"><i
+                class="fa-solid fa-users-gear"></i> 계정 및 권한 관리</div>
+        <div class="menu-item" onclick="switchView('logs', this)"><i class="fa-solid fa-file-shield"></i> 시스템 감사 로그
+        </div>
 
         <button class="btn btn-danger" style="margin-top: auto; padding: 12px; width: 100%;" onclick="handleLogout()">
             <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
@@ -626,15 +635,20 @@
     <div class="main-wrapper">
         <div class="top-navbar">
             <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
-            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM LIVE</span></div>
+            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM
+                    LIVE</span></div>
         </div>
 
         <div class="content-body">
             <div id="view-dashboard" class="view-section active">
                 <div class="map-section">
-                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map</div>
+                    <div class="section-title"><i class="fa-solid fa-map-location-dot"></i> Live Tracking Display Map
+                    </div>
+                    <!-- 🗺️ 선로 레이아웃 SVG 및 마커 레이어가 겹치도록 맵 컨테이너 내부 구조 최적화 -->
                     <div class="map-container" id="live-map">
+                        <!-- 선로 도면 레이어 (z-index: 1) -->
                         <svg id="track-svg" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none;"></svg>
+                        <!-- 실시간 열차 마커 레이어 (z-index: 2) -->
                         <div id="train-markers-layer" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 2; pointer-events: none;"></div>
                     </div>
                 </div>
@@ -645,10 +659,13 @@
 
             <div id="view-accounts" class="view-section">
                 <div class="card-table-wrap">
-                    <div class="section-title" id="form-main-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템</div>
+                    <div class="section-title" id="form-main-title"><i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급
+                        시스템</div>
                     <div class="admin-flex">
                         <div class="admin-form" id="account-form">
-                            <h3 id="form-action-title" style="margin-top:0; font-size:14px; color:var(--primary); margin-bottom:15px;">계정 생성</h3>
+                            <h3 id="form-action-title"
+                                style="margin-top:0; font-size:14px; color:var(--primary); margin-bottom:15px;">계정 생성
+                            </h3>
                             <div class="form-group">
                                 <label>관제원 ID</label>
                                 <input type="text" id="new-user-id" class="form-control" placeholder="아이디 지정">
@@ -663,14 +680,18 @@
                             </div>
                             <div class="form-group">
                                 <label>권한 등급 설정</label>
-                                <select id="new-user-role" class="form-control" style="background:#000; color:#fff; cursor: pointer;">
+                                <select id="new-user-role" class="form-control"
+                                    style="background:#000; color:#fff; cursor: pointer;">
                                     <option value="일반 관제원">일반 관제원</option>
                                     <option value="최고 관리자">최고 관리자</option>
                                 </select>
                             </div>
                             <div style="display:flex; gap:10px;">
-                                <button id="btn-submit" class="btn btn-primary" style="flex:1; margin-top: 10px;" onclick="submitAccountForm()">계정 생성 및 발급</button>
-                                <button id="btn-cancel" class="btn btn-danger" style="flex:1; margin-top: 10px; display:none;" onclick="cancelEditMode()">취소</button>
+                                <button id="btn-submit" class="btn btn-primary" style="flex:1; margin-top: 10px;"
+                                    onclick="submitAccountForm()">계정 생성 및 발급</button>
+                                <button id="btn-cancel" class="btn btn-danger"
+                                    style="flex:1; margin-top: 10px; display:none;"
+                                    onclick="cancelEditMode()">취소</button>
                             </div>
                         </div>
                         <div style="flex: 1;">
@@ -705,7 +726,9 @@
         const MASTER_ADMIN_ID = "lsrhjru";
         const FALLBACK_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
 
-        let ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
+        // 🌐 선로 레이아웃에 맞게 백엔드 API에서 로드될 맵의 경계(Bounds) 정보 (기본값 설정)[cite: 3]
+        let ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 }; //[cite: 3]
+
         let accountDB = [];
         let currentUserSession = null;
         let lastRenderedLogCount = 0;
@@ -733,41 +756,55 @@
                     robloxCache[id] = data;
                     return data;
                 } catch (e) {
-                    const fallback = { username: `ID: ${id}`, avatarUrl: FALLBACK_AVATAR };
+                    console.error(`로블록스 정보 획득 실패 (ID: ${id})`, e);
+                    const fallback = {
+                        username: `ID: ${id}`,
+                        avatarUrl: FALLBACK_AVATAR
+                    };
                     robloxCache[id] = fallback;
                     return fallback;
                 } finally {
                     delete robloxPromises[id];
                 }
             })();
+
             return robloxPromises[id];
         }
 
         window.onload = async () => {
-            await fetchTrackLayout();
+            await fetchTrackLayout(); // 🗺️ 백엔드로부터 dynamic 선로 레이아웃 및 Bounds 동기화[cite: 3]
             await fetchAccounts();
         };
 
+        // 🗺️ 백엔드에서 선로 레이아웃 데이터를 가져와 그리고, Bounds 범위를 갱신하는 함수[cite: 3]
         async function fetchTrackLayout() {
             try {
                 const res = await fetch(`/api/track-layout?t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     if (data) {
-                        if (data.bounds) ROBLOX_MAP_BOUNDS = data.bounds;
-                        if (data.segments && data.segments.length > 0) drawTracks(data.segments);
+                        if (data.bounds) {
+                            ROBLOX_MAP_BOUNDS = data.bounds;
+                            console.log("▶ [지도 동기화] 선로 레이아웃의 실시간 Bounds를 성공적으로 갱신했습니다.", ROBLOX_MAP_BOUNDS);
+                        }
+                        if (data.segments && data.segments.length > 0) {
+                            drawTracks(data.segments);
+                        }
                     }
                 }
             } catch (e) {
-                console.error("선로 레이아웃을 가져오지 못했습니다.", e);
+                console.error("선로 레이아웃을 가져오지 못해 기본 좌표 범위(-3000 ~ 3000)를 사용합니다.", e);
             }
         }
 
+        // 🗺️ 수신한 3D 세그먼트 좌표를 웹 화면 비율(%)에 매핑하여 SVG로 선로를 그립니다.
         function drawTracks(segments) {
             const svg = document.getElementById('track-svg');
             if (!svg) return;
-            svg.innerHTML = "";
+            svg.innerHTML = ""; // 이전 선로 데이터 삭제
+
             segments.forEach(seg => {
+                // 실제 3D 좌표 (X, Z) -> 관제 모니터 (X, Y) 백분율로 환산
                 const x1Pct = ((seg.x1 - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
                 const z1Pct = ((seg.z1 - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
                 const x2Pct = ((seg.x2 - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
@@ -778,12 +815,16 @@
                 line.setAttribute("y1", `${z1Pct}%`);
                 line.setAttribute("x2", `${x2Pct}%`);
                 line.setAttribute("y2", `${z2Pct}%`);
-                line.setAttribute("stroke", "rgba(88, 166, 255, 0.25)");
+
+                // 궤도 느낌을 강조하기 위한 스타일 속성 적용
+                line.setAttribute("stroke", "rgba(88, 166, 255, 0.25)"); // 어두운 청록/파랑 빛
                 line.setAttribute("stroke-width", "3.5");
                 line.setAttribute("stroke-linecap", "round");
                 line.style.filter = "drop-shadow(0px 0px 1px rgba(88, 166, 255, 0.4))";
+
                 svg.appendChild(line);
             });
+            console.log(`▶ [지도 그리기] ${segments.length}개의 궤도 세그먼트를 렌더링 완료하였습니다.`);
         }
 
         async function fetchAccounts() {
@@ -806,40 +847,64 @@
             document.getElementById('nav-title').innerText = titles[viewId] || "통합 관제 시스템";
         }
 
+        // 🔒 [보안 업그레이드] 서버에 있는 bcrypt 암호화 해시와 브라우저 자체 대조 수행[cite: 3]
         async function handleLogin() {
             const idInput = document.getElementById('login-id');
             const pwInput = document.getElementById('login-pw');
             const inputId = idInput.value.trim();
             const inputPw = pwInput.value.trim();
 
-            if (!inputId || !inputPw) { alert("ID와 비밀번호를 입력하세요."); return; }
+            if (!inputId) { alert("아이디를 입력하세요."); idInput.focus(); return; }
+            if (!inputPw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
 
             await fetchAccounts();
+
+            // 해시값 대조 작업 실행[cite: 3]
             const found = accountDB.find(u => {
                 if (u.id !== inputId) return false;
                 try {
-                    if (u.pw.startsWith('$2')) return bcrypt.compareSync(inputPw, u.pw);
-                } catch (err) { }
-                return u.pw === inputPw;
+                    // DB 비밀번호 필드가 bcrypt 해시 형식인 경우 동적 비교 수행[cite: 3]
+                    if (u.pw.startsWith('$2')) {
+                        return dcodeIO.bcrypt.compareSync(inputPw, u.pw);
+                    }
+                } catch (err) {
+                    console.error("Bcrypt 복호화 에러:", err);
+                }
+                return u.pw === inputPw; // 백업용 일반 텍스트 비교[cite: 3]
             });
 
             if (found) {
                 currentUserSession = found;
                 document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('session-role').innerText = currentUserSession.role;
+
+                document.getElementById('session-username').innerText = "로딩 중...";
                 const profile = await getRobloxProfile(currentUserSession.rbxId);
+
                 document.getElementById('my-avatar').src = profile.avatarUrl;
                 document.getElementById('session-username').innerText = profile.username;
-                document.getElementById('menu-accounts').style.display = hasAdminPrivilege(currentUserSession) ? 'flex' : 'none';
+
+                if (!hasAdminPrivilege(currentUserSession)) {
+                    document.getElementById('menu-accounts').style.display = 'none';
+                } else {
+                    document.getElementById('menu-accounts').style.display = 'flex';
+                }
+                
+                // 로그인 완료 시 최신 선로 데이터도 즉시 재호출
                 await fetchTrackLayout();
             } else {
-                alert("인증에 실패했습니다.");
+                alert("인증에 실패했습니다. 아이디 또는 비밀번호를 확인하세요.");
             }
         }
 
         function handleLogout() {
             currentUserSession = null;
+            document.getElementById('login-id').value = "";
+            document.getElementById('login-pw').value = "";
             document.getElementById('auth-overlay').style.display = 'flex';
+            document.getElementById('my-avatar').src = FALLBACK_AVATAR;
+            document.getElementById('session-username').innerText = "대기 중";
+            document.getElementById('session-role').innerText = "-";
             switchView('dashboard', document.querySelector('.menu-item'));
         }
 
@@ -849,73 +914,148 @@
         }
 
         async function createNewAccount() {
-            if (!hasAdminPrivilege(currentUserSession)) return alert("권한이 없습니다.");
-            const id = document.getElementById('new-user-id').value;
-            const pw = document.getElementById('new-user-pw').value;
-            const rbxId = document.getElementById('new-user-rbx').value;
-            const role = document.getElementById('new-user-role').value;
+            if (!hasAdminPrivilege(currentUserSession)) return alert("계정을 생성할 권한이 없습니다.");
+
+            const idInput = document.getElementById('new-user-id');
+            const pwInput = document.getElementById('new-user-pw');
+            const newId = idInput.value.trim();
+            const newPw = pwInput.value.trim();
+            const newRbx = parseInt(document.getElementById('new-user-rbx').value) || 1;
+            const newRole = document.getElementById('new-user-role').value;
+
+            if (!newId) { alert("발급할 관제원 아이디를 입력하세요."); idInput.focus(); return; }
+            if (!newPw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
 
             try {
                 const res = await fetch('/api/accounts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, pw, rbxId, role, adminId: currentUserSession.id })
+                    body: JSON.stringify({
+                        id: newId,
+                        pw: newPw,
+                        rbxId: newRbx,
+                        role: newRole,
+                        adminId: currentUserSession.id // 감사 로그용 adminId 전달[cite: 3]
+                    })
                 });
+
                 const data = await res.json();
                 if (data.error) alert(data.error);
-                else { alert("계정 생성 완료"); clearForm(); await fetchAccounts(); }
-            } catch (e) { }
+                else {
+                    alert(`계정 [${newId}]이 정상 발급되었습니다.`);
+                    clearForm();
+                    await fetchAccounts();
+                }
+            } catch (e) {
+                console.error("계정 생성 오류", e);
+            }
         }
 
+        // 🔄 계정 정보 수정 UI 갱신 (비밀번호 이중 암호화 방지 구조)[cite: 3]
         function startEditMode(id, rbxId, role) {
             isEditMode = true;
             editingTargetId = id;
-            document.getElementById('new-user-id').value = id;
-            document.getElementById('new-user-id').disabled = true;
+
+            document.getElementById('form-main-title').innerHTML = `<i class="fa-solid fa-user-pen"></i> 관제 계정 정보 수정`;
+            document.getElementById('form-action-title').innerText = "정보 수정 진행 중";
+
+            const idInput = document.getElementById('new-user-id');
+            idInput.value = id;
+            idInput.disabled = true;
+
+            // 해시값 노출을 막고 수정 의사가 있을 때만 전송할 수 있도록 비움[cite: 3]
+            document.getElementById('new-user-pw').value = "";
+            document.getElementById('new-user-pw').placeholder = "변경할 때만 새 비밀번호 입력";
+
             document.getElementById('new-user-rbx').value = rbxId;
             document.getElementById('new-user-role').value = role;
+
             document.getElementById('btn-submit').innerText = "수정 완료";
             document.getElementById('btn-cancel').style.display = "block";
         }
 
-        function clearForm() {
+        function cancelEditMode() {
             isEditMode = false;
-            document.getElementById('new-user-id').value = "";
-            document.getElementById('new-user-id').disabled = false;
+            editingTargetId = null;
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById('form-main-title').innerHTML = `<i class="fa-solid fa-user-plus"></i> 신규 하위 관제 계정 발급 시스템`;
+            document.getElementById('form-action-title').innerText = "계정 생성";
+
+            const idInput = document.getElementById('new-user-id');
+            idInput.value = "";
+            idInput.disabled = false;
+
             document.getElementById('new-user-pw').value = "";
+            document.getElementById('new-user-pw').placeholder = "비밀번호 지정";
+            document.getElementById('new-user-rbx').value = "1";
+            document.getElementById('new-user-role').value = "일반 관제원";
+
             document.getElementById('btn-submit').innerText = "계정 생성 및 발급";
             document.getElementById('btn-cancel').style.display = "none";
         }
 
         async function updateExistingAccount() {
-            if (!hasAdminPrivilege(currentUserSession)) return;
-            const pw = document.getElementById('new-user-pw').value;
-            const rbxId = document.getElementById('new-user-rbx').value;
+            if (!hasAdminPrivilege(currentUserSession)) return alert("계정을 수정할 권한이 없습니다.");
+
+            const pwInput = document.getElementById('new-user-pw');
+            const pw = pwInput.value.trim();
+            const rbxId = parseInt(document.getElementById('new-user-rbx').value) || 1;
             const role = document.getElementById('new-user-role').value;
-            const payload = { rbxId, role, adminId: currentUserSession.id, ...(pw && { pw }) };
+
+            // 수정 시 변경값이 공백인 항목은 전송하지 않음 (패스워드 유지 기능)[cite: 3]
+            const payload = {
+                rbxId: rbxId,
+                role: role,
+                adminId: currentUserSession.id
+            };
+            if (pw) {
+                payload.pw = pw;
+            }
 
             try {
-                await fetch(`/api/accounts/${editingTargetId}`, {
+                const res = await fetch(`/api/accounts/${editingTargetId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                alert("수정 완료");
-                clearForm();
-                await fetchAccounts();
-            } catch (e) { }
+
+                const data = await res.json();
+                if (data.error) alert(data.error);
+                else {
+                    alert(`계정 [${editingTargetId}]의 정보가 수정되었습니다.`);
+                    cancelEditMode();
+                    await fetchAccounts();
+                }
+            } catch (e) {
+                console.error("계정 수정 중 통신 실패", e);
+            }
         }
 
         async function deleteAccount(id) {
-            if (!confirm(`정말로 삭제하시겠습니까?`)) return;
+            if (!hasAdminPrivilege(currentUserSession)) return alert("계정을 삭제할 권한이 없습니다.");
+            if (id === MASTER_ADMIN_ID) return alert("시스템 마스터 계정은 삭제할 수 없습니다.");
+
+            if (!confirm(`정말로 계정 [${id}]을(를) 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) return;
+
             try {
-                await fetch(`/api/accounts/${id}`, {
+                const res = await fetch(`/api/accounts/${id}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ adminId: currentUserSession.id })
+                    body: JSON.stringify({ adminId: currentUserSession.id }) // 감사 로그용 데이터 탑재[cite: 3]
                 });
-                await fetchAccounts();
-            } catch (e) { }
+                const data = await res.json();
+                if (data.error) alert(data.error);
+                else {
+                    alert(`계정 [${id}]이 삭제되었습니다.`);
+                    if (isEditMode && editingTargetId === id) cancelEditMode();
+                    await fetchAccounts();
+                }
+            } catch (e) {
+                console.error("계정 삭제 중 오류 발생", e);
+            }
         }
 
         function renderAccounts() {
@@ -924,28 +1064,325 @@
             accountDB.forEach(u => {
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === MASTER_ADMIN_ID);
                 const tr = document.createElement('tr');
+
+                // 암호값인 u.pw는 파라미터에서 제거하여 보안 유출 및 따옴표 깨짐 에러 방지[cite: 3]
+                const actionButtons = isSuperAdmin ?
+                    `<span style="color:var(--text-muted); font-size:12px;"><i class="fa-solid fa-lock"></i> 수정/삭제 보호됨</span>` :
+                    `<button class="btn btn-primary" style="display:inline-block; padding: 4px 10px; font-size:11px; margin-right:5px; font-weight:700;" onclick="startEditMode('${u.id}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen"></i> 수정</button>
+                     <button class="btn btn-danger" style="display:inline-block; padding: 4px 10px; font-size:11px; font-weight:700;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash"></i> 삭제</button>`;
+
                 tr.innerHTML = `
-                    <td><img src="${FALLBACK_AVATAR}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary);"></td>
-                    <td>${u.id}</td>
-                    <td>${u.rbxId}</td>
-                    <td>${u.role}</td>
-                    <td>활성화</td>
-                    <td>${isSuperAdmin ? '-' : `<button onclick="startEditMode('${u.id}', ${u.rbxId}, '${u.role}')">수정</button> <button onclick="deleteAccount('${u.id}')">삭제</button>`}</td>
+                    <td><img id="acc-avatar-${u.id}" src="${FALLBACK_AVATAR}" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--primary); object-fit:cover;"></td>
+                    <td style="font-weight:bold;">${u.id}</td>
+                    <td><span id="acc-name-${u.id}">불러오는 중...</span> (ID: ${u.rbxId})</td>
+                    <td><span style="color:${isSuperAdmin ? 'var(--primary)' : 'var(--text-muted)'}">${u.role}</span></td>
+                    <td><span class="status-badge status-normal" style="padding: 2px 6px; font-size:11px;">활성화됨</span></td>
+                    <td>${actionButtons}</td>
                 `;
                 tbody.appendChild(tr);
+
+                getRobloxProfile(u.rbxId).then(profile => {
+                    const avatarImg = document.getElementById(`acc-avatar-${u.id}`);
+                    const nameSpan = document.getElementById(`acc-name-${u.id}`);
+                    if (avatarImg) avatarImg.src = profile.avatarUrl;
+                    if (nameSpan) nameSpan.innerText = profile.username;
+                });
             });
+        }
+
+        function renderLogs(logs) {
+            if (!logs || logs.length === 0 || logs.length === lastRenderedLogCount) return;
+
+            const container = document.getElementById('log-display-container');
+            container.innerHTML = "";
+
+            logs.forEach(log => {
+                const logLine = document.createElement('div');
+                logLine.className = 'log-line';
+                logLine.innerHTML = `<span class="log-time">[${log.timeStr || log.time}]</span><span class="log-user">@${log.user || 'SYSTEM'}</span> <span style="color:#fff;">${log.text || log.message}</span>`;
+                container.appendChild(logLine);
+            });
+
+            container.scrollTop = container.scrollHeight;
+            lastRenderedLogCount = logs.length;
+        }
+
+        // DOM 업데이트 헬퍼 함수 (값이 변경되었을 때만 DOM을 조작하여 렉 방지)[cite: 3]
+        function updateTextSafely(element, newText) {
+            if (element && element.innerText !== newText) {
+                element.innerText = newText;
+            }
         }
 
         async function updateDashboard() {
             if (!currentUserSession) return;
+
             try {
-                const res = await fetch(`/api/current-data?t=${Date.now()}`);
-                const data = await res.json();
-                // (이하 생략 - 이전 대시보드 로직 유지)
-            } catch (e) { }
+                const res = await fetch(`/api/current-data?t=${Date.now()}`, { cache: 'no-store' });
+                if (!res.ok) throw new Error("실시간 데이터 동기화 실패");
+                const data = await res.json() || {};
+
+                const trains = data.trains || {};
+                const logs = data.logs || [];
+
+                renderLogs(logs);
+
+                const grid = document.getElementById('dashboard-grid');
+                const markerLayer = document.getElementById('train-markers-layer');
+                const noTrainsMsg = document.getElementById('no-trains-msg');
+
+                const currentIds = Object.keys(trains);
+
+                if (currentIds.length === 0) {
+                    grid.innerHTML = '<div class="no-trains" id="no-trains-msg">네트워크 연결 대기 중이거나 운행 중인 열차가 없습니다.</div>';
+                    markerLayer.innerHTML = '';
+                    return;
+                }
+
+                if (noTrainsMsg) noTrainsMsg.remove();
+
+                // 사라진 열차 UI 삭제[cite: 3]
+                document.querySelectorAll('.train-card').forEach(card => {
+                    if (!trains[card.dataset.id]) card.remove();
+                });
+                document.querySelectorAll('.train-marker').forEach(marker => {
+                    if (!trains[marker.dataset.id]) marker.remove();
+                });
+
+                for (const id in trains) {
+                    const train = trains[id];
+                    if (!train) continue;
+
+                    const speed = typeof train.CurrentSpeed !== 'undefined' ? train.CurrentSpeed : (train.Speed || 0);
+                    const speedLimit = typeof train.SpeedLimit !== 'undefined' ? train.SpeedLimit : (train.Limit || 30);
+                    const isEms = train.IsEmergency || train.Emergency || train.remoteEmergencyActive;
+                    const posX = typeof train.PositionX !== 'undefined' ? train.PositionX : (train.X || 0);
+                    const posZ = typeof train.PositionZ !== 'undefined' ? train.PositionZ : (train.Z || 0);
+                    const notch = typeof train.CurrentNotch !== 'undefined' ? train.CurrentNotch : (train.Notch || 0);
+                    const reverser = typeof train.CurrentReverser !== 'undefined' ? train.CurrentReverser : (train.Reverser || 0);
+                    const trainLine = train.Line || train.LineName || "정보 없음";
+                    const trainDest = train.Destination || train.DestinationName || "정보 없음";
+
+                    const safeTrainName = typeof train.TrainName === 'string' ? train.TrainName : String(train.TrainName || "운행열차");
+
+                    // 1. 마커 업데이트 최적화[cite: 3]
+                    let marker = document.querySelector(`.train-marker[data-id="${id}"]`);
+                    if (!marker) {
+                        marker = document.createElement('div');
+                        marker.className = 'train-marker';
+                        marker.dataset.id = id;
+                        const label = document.createElement('div');
+                        label.className = 'train-marker-label';
+                        marker.appendChild(label);
+                        markerLayer.appendChild(marker); // svg의 z-index 위층 레이어에 삽입
+                    }
+
+                    if (isEms) {
+                        if (!marker.classList.contains('ems')) marker.classList.add('ems');
+                    } else {
+                        if (marker.classList.contains('ems')) marker.classList.remove('ems');
+                    }
+
+                    let pctX = (((posX) - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
+                    let pctZ = (((posZ) - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
+
+                    const newLeft = `${Math.max(0, Math.min(100, pctX))}%`;
+                    const newTop = `${Math.max(0, Math.min(100, pctZ))}%`;
+                    if (marker.style.left !== newLeft) marker.style.left = newLeft;
+                    if (marker.style.top !== newTop) marker.style.top = newTop;
+
+                    const markerLabel = `${safeTrainName.split(' ')[0]} (${speed}km/h)`;
+                    updateTextSafely(marker.querySelector('.train-marker-label'), markerLabel);
+
+                    // 2. 카드 업데이트 최적화[cite: 3]
+                    let card = document.querySelector(`.train-card[data-id="${id}"]`);
+                    if (!card) {
+                        card = document.createElement('div');
+                        card.className = 'train-card';
+                        card.dataset.id = id;
+                        card.dataset.driverId = ""; // 운전자 변경 추적용 데이터셋 추가[cite: 3]
+                        card.innerHTML = `
+                            <div>
+                                <div class="card-header">
+                                    <span class="v-name"></span>
+                                    <span class="train-id">ID: ${id}</span>
+                                </div>
+                                <div class="info-row"><span class="info-label">현재 속도</span><span class="info-value v-speed">0 km/h</span></div>
+                                <div class="info-row"><span class="info-label">운행 노선</span><span class="info-value v-line">-</span></div>
+                                <div class="info-row"><span class="info-label">행선지</span><span class="info-value v-destination">-</span></div>
+                                <div class="info-row"><span class="info-label">제어 단수</span><span class="info-value v-notch">N</span></div>
+                                <div class="info-row"><span class="info-label">역전기 방향</span><span class="info-value v-rev">중립 (N)</span></div>
+                                <div class="info-row"><span class="info-label">현재 좌표 (X, Z)</span><span class="info-value v-pos" style="color:var(--text-muted);">0, 0</span></div>
+                                <div class="info-row"><span class="info-label">경계장치 상태</span><span class="info-value v-vigilance" style="font-weight:700;">활성화 (정상)</span></div>
+                                <div class="limit-input-zone">
+                                    <span style="font-size:13px; font-weight:500;">ATC 제한속도 변경</span>
+                                    <div>
+                                        <input type="number" class="limit-input" value="${speedLimit}" 
+                                               onfocus="this.dataset.editing='true'" 
+                                               onblur="setTimeout(() => { this.dataset.editing='false'; }, 500)">
+                                        <button class="btn-sm btn btn-primary" style="padding:6px 10px; display:inline-block;" onclick="setSpeedLimit('${id}', this)"><i class="fa-solid fa-check"></i></button>
+                                    </div>
+                                </div>
+                                <div class="info-row" style="align-items:center; margin-top:15px;">
+                                    <span class="info-label">안전 상태</span>
+                                    <span class="status-badge v-badge">정상</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="driver-zone">
+                                    <img class="avatar v-avatar" src="${FALLBACK_AVATAR}" alt="Driver">
+                                    <div class="driver-meta">
+                                        <span class="driver-name v-driver">대기 중</span>
+                                        <span style="font-size:11px; color:var(--text-muted);">Roblox 기장</span>
+                                    </div>
+                                </div>
+                                <div class="control-zone">
+                                    <button class="btn btn-danger" onclick="triggerEmergency('${id}')"><i class="fa-solid fa-triangle-exclamation"></i> 비상정지</button>
+                                    <button class="btn btn-safe" onclick="resetEmergency('${id}')"><i class="fa-solid fa-lock-open"></i> 해제</button>
+                                    <button class="btn v-vigilance-btn" onclick="toggleVigilance('${id}')"><i class="fa-solid fa-eye-slash"></i> 경계 끄기</button>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    }
+
+                    // 텍스트 정보 최적화 반영[cite: 3]
+                    updateTextSafely(card.querySelector('.v-name'), safeTrainName);
+                    updateTextSafely(card.querySelector('.v-speed'), `${speed} km/h (제한: ${speedLimit} km/h)`);
+                    updateTextSafely(card.querySelector('.v-line'), trainLine);
+                    updateTextSafely(card.querySelector('.v-destination'), trainDest);
+
+                    let notchText = "N";
+                    if (notch > 0) notchText = "P" + notch;
+                    else if (notch < 0) notchText = (notch === -5) ? "EB (비상)" : "B" + Math.abs(notch);
+                    updateTextSafely(card.querySelector('.v-notch'), notchText);
+
+                    let revText = "중립 (N)";
+                    if (reverser === 1) revText = "전진 (F)";
+                    else if (reverser === -1) revText = "후진 (B)";
+                    updateTextSafely(card.querySelector('.v-rev'), revText);
+                    updateTextSafely(card.querySelector('.v-pos'), `${posX}, ${posZ}`);
+
+                    const vigSpan = card.querySelector('.v-vigilance');
+                    const vigBtn = card.querySelector('.v-vigilance-btn');
+                    const isVigActive = train.VigilanceEnabled !== false;
+
+                    if (isVigActive) {
+                        updateTextSafely(vigSpan, "작동 중 (정상)");
+                        if (vigSpan && vigSpan.style.color !== "var(--success)") vigSpan.style.color = "var(--success)";
+                        if (vigBtn && vigBtn.innerHTML.indexOf("경계 끄기") === -1) {
+                            vigBtn.style.background = "#e67e22";
+                            vigBtn.innerHTML = "<i class='fa-solid fa-eye-slash'></i> 경계 끄기";
+                        }
+                    } else {
+                        updateTextSafely(vigSpan, "비활성화 (원격)");
+                        if (vigSpan && vigSpan.style.color !== "var(--danger)") vigSpan.style.color = "var(--danger)";
+                        if (vigBtn && vigBtn.innerHTML.indexOf("경계 켜기") === -1) {
+                            vigBtn.style.background = "var(--success)";
+                            vigBtn.innerHTML = "<i class='fa-solid fa-eye'></i> 경계 켜기";
+                        }
+                    }
+
+                    // 🔒 Race Condition (인풋 덮어씌움) 방지 로직 보완[cite: 3]
+                    const limitInput = card.querySelector('.limit-input');
+                    if (limitInput && limitInput.dataset.editing !== 'true' && limitInput.dataset.pending !== 'true' && document.activeElement !== limitInput) {
+                        if (limitInput.value !== String(speedLimit)) {
+                            limitInput.value = speedLimit;
+                        }
+                    }
+
+                    const badge = card.querySelector('.v-badge');
+                    if (train.remoteEmergencyActive) {
+                        if (badge.className !== "status-badge status-ems") badge.className = "status-badge status-ems";
+                        updateTextSafely(badge, "원격 강제 제동");
+                    } else if (train.IsEmergency || train.Emergency) {
+                        if (badge.className !== "status-badge status-ems") badge.className = "status-badge status-ems";
+                        updateTextSafely(badge, "과속/비상 체결");
+                    } else {
+                        if (badge.className !== "status-badge status-normal") badge.className = "status-badge status-normal";
+                        updateTextSafely(badge, "정상 신호 운영");
+                    }
+
+                    // 🚀 로블록스 아바타 무한 로딩 렉 방지 (운전자가 바뀔 때만 통신)[cite: 3]
+                    const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
+                    if (card.dataset.driverId !== String(targetUserId)) {
+                        card.dataset.driverId = String(targetUserId); // 현재 운전자 ID 고정[cite: 3]
+
+                        getRobloxProfile(targetUserId).then(profile => {
+                            const avatarImg = card.querySelector('.v-avatar');
+                            const nameSpan = card.querySelector('.v-driver');
+                            if (avatarImg && avatarImg.src !== profile.avatarUrl) {
+                                avatarImg.src = profile.avatarUrl;
+                            }
+                            if (nameSpan) {
+                                nameSpan.innerText = train.DriverName || profile.username;
+                            }
+                        });
+                    } else {
+                        const nameSpan = card.querySelector('.v-driver');
+                        if (nameSpan && train.DriverName) {
+                            updateTextSafely(nameSpan, train.DriverName);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("대시보드 동기화 오류...", e);
+            }
         }
 
+        async function setSpeedLimit(trainId, buttonObj) {
+            const inputField = buttonObj.previousElementSibling;
+            const inputVal = parseInt(inputField.value);
+            if (isNaN(inputVal) || inputVal < 0) return alert("올바른 속도를 입력하세요.");
+
+            // 🌟 폼 덮어쓰기 방지 (보호 모드 2초 유지)[cite: 3]
+            inputField.dataset.pending = 'true';
+            setTimeout(() => { inputField.dataset.pending = 'false'; }, 2000);
+
+            try {
+                await fetch('/api/web-speedlimit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ trainId: trainId, speedLimit: inputVal, adminId: currentUserSession.id })
+                });
+            } catch (e) {
+                console.error("속도 제한 전송 실패", e);
+            }
+        }
+
+        async function triggerEmergency(trainId) {
+            await fetch('/api/web-emergency', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId, adminId: currentUserSession.id })
+            });
+        }
+
+        async function resetEmergency(trainId) {
+            await fetch('/api/web-reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId, adminId: currentUserSession.id })
+            });
+        }
+
+        async function toggleVigilance(trainId) {
+            const card = document.querySelector(`.train-card[data-id="${trainId}"]`);
+            if (!card) return;
+            const vigSpan = card.querySelector('.v-vigilance');
+            const isCurrentlyEnabled = vigSpan && vigSpan.innerText.includes("작동 중");
+            const nextState = !isCurrentlyEnabled;
+
+            await fetch('/api/web-vigilance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trainId: trainId, vigilanceEnabled: nextState, adminId: currentUserSession.id })
+            });
+        }
+
+        // 1초 단위 실시간 데이터 갱신
         setInterval(updateDashboard, 1000);
     </script>
 </body>
+
 </html>
