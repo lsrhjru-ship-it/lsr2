@@ -1,443 +1,449 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const mongoose = require('mongoose'); // ➕ MongoDB 연결을 위한 Mongoose 추가[cite: 4]
-const bcrypt = require('bcryptjs'); // 🔒 보안을 위한 bcryptjs 추가[cite: 4]
+const mongoose = require('mongoose'); // ➕ MongoDB 연결을 위한 Mongoose 추가
+const bcrypt = require('bcryptjs'); // 🔒 보안을 위한 bcryptjs 추가
 
 const app = express();
 
-// 🌐 Render 환경에서는 지정된 포트를 우선 사용하고, 로컬 개발 환경에서는 3000번 포트를 사용합니다.[cite: 4]
-const PORT = process.env.PORT || 3000; //[cite: 4]
+// 🌐 Render 환경에서는 지정된 포트를 우선 사용하고, 로컬 개발 환경에서는 3000번 포트를 사용합니다.
+const PORT = process.env.PORT || 3000; //
 
-app.use(express.json({ limit: '50mb' })); //[cite: 4]
-
-// ============================
-// 💾 [데이터베이스 설정] MongoDB 연결[cite: 4]
-// ============================
-// Render 환경변수(MONGO_URI)가 있으면 클라우드 Atlas를 사용하고, 없으면 로컬 DB에 접속합니다.[cite: 4]
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/train_control_tower'; //[cite: 4]
-
-mongoose.connect(MONGO_URI) //[cite: 4]
-    .then(() => { //[cite: 4]
-        console.log('▶ [DB] MongoDB 연결 성공!'); //[cite: 4]
-        initAdminAccount(); // 연결 성공 후 관리자 계정 초기화 실행[cite: 4]
-    }) //[cite: 4]
-    .catch(err => console.error('◀ [DB] MongoDB 연결 실패:', err)); //[cite: 4]
-
-// 계정(Account) 스키마 및 모델 정의[cite: 4]
-const accountSchema = new mongoose.Schema({ //[cite: 4]
-    id: { type: String, required: true, unique: true }, //[cite: 4]
-    pw: { type: String, required: true }, //[cite: 4]
-    rbxId: { type: Number, default: 1 }, //[cite: 4]
-    role: { type: String, default: '일반 관제원' } //[cite: 4]
-}); //[cite: 4]
-
-// 🔒 [보안 필터] DB에 저장(create/save)되기 전 비밀번호를 자동으로 해싱하는 Hook[cite: 4]
-accountSchema.pre('save', async function (next) { //[cite: 4]
-    if (!this.isModified('pw')) return next(); //[cite: 4]
-    try { //[cite: 4]
-        const salt = await bcrypt.genSalt(10); //[cite: 4]
-        this.pw = await bcrypt.hash(this.pw, salt); //[cite: 4]
-        next(); //[cite: 4]
-    } catch (err) { //[cite: 4]
-        next(err); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
-
-const Account = mongoose.model('Account', accountSchema); //[cite: 4]
-
-// 최고 관리자 계정 자동 생성 함수[cite: 4]
-async function initAdminAccount() { //[cite: 4]
-    try { //[cite: 4]
-        const adminExists = await Account.findOne({ id: "lsrhjru" }); //[cite: 4]
-        if (!adminExists) { //[cite: 4]
-            // 여기에 평문 비밀번호를 넣어도 DB 저장 시 pre-save hook에 의해 암호화되어 안전하게 기록됩니다.[cite: 4]
-            await Account.create({ //[cite: 4]
-                id: "lsrhjru", //[cite: 4]
-                pw: "lsr37733*", //[cite: 4]
-                rbxId: 4548323500, //[cite: 4]
-                role: "최고 관리자" //[cite: 4]
-            }); //[cite: 4]
-            addLog("[시스템] 기본 최고 관리자 계정이 DB에 암호화되어 생성되었습니다. 🔐"); //[cite: 4]
-        } //[cite: 4]
-    } catch (e) { //[cite: 4]
-        console.error("최고 관리자 초기화 에러:", e); //[cite: 4]
-    } //[cite: 4]
-} //[cite: 4]
+app.use(express.json({ limit: '50mb' })); //
 
 // ============================
-// 🚂 실시간 열차 데이터 및 로그 변수[cite: 4]
+// 💾 [데이터베이스 설정] MongoDB 연결
 // ============================
-let trains = {}; //[cite: 4]
-let logs = []; //[cite: 4]
-const robloxCache = {}; //[cite: 4]
+// Render 환경변수(MONGO_URI)가 있으면 클라우드 Atlas를 사용하고, 없으면 로컬 DB에 접속합니다.
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/train_control_tower'; //
 
-function addLog(message) { //[cite: 4]
-    const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false }); //[cite: 4]
-    logs.unshift({ time: timestamp, text: message }); //[cite: 4]
-    if (logs.length > 30) { //[cite: 4]
-        logs.pop(); //[cite: 4]
-    } //[cite: 4]
-} //[cite: 4]
+mongoose.connect(MONGO_URI) //
+    .then(() => { //
+        console.log('▶ [DB] MongoDB 연결 성공!'); //
+        initAdminAccount(); // 연결 성공 후 관리자 계정 초기화 실행
+    }) //
+    .catch(err => console.error('◀ [DB] MongoDB 연결 실패:', err)); //
 
-addLog("통합 관제탑 시스템이 성공적으로 준비되었습니다. 🛰️"); //[cite: 4]
+// 계정(Account) 스키마 및 모델 정의
+const accountSchema = new mongoose.Schema({ //
+    id: { type: String, required: true, unique: true }, //
+    pw: { type: String, required: true }, //
+    rbxId: { type: Number, default: 1 }, //
+    role: { type: String, default: '일반 관제원' } //
+}); //
 
-// ============================
-// 🗺️ 선로 레이아웃 저장소 (segments와 bounds 처리 포함)[cite: 4]
-// ============================
-const TRACK_PATH = path.join(__dirname, 'track.json'); //[cite: 4]
-let trackLayout = { segments: [], bounds: null, updatedAt: null }; //[cite: 4]
-try { //[cite: 4]
-    if (fs.existsSync(TRACK_PATH)) { //[cite: 4]
-        trackLayout = JSON.parse(fs.readFileSync(TRACK_PATH, 'utf-8')); //[cite: 4]
-    } //[cite: 4]
-} catch (e) { //[cite: 4]
-    trackLayout = { segments: [], bounds: null, updatedAt: null }; //[cite: 4]
-} //[cite: 4]
+// 🔒 [보안 필터] DB에 저장(create/save)되기 전 비밀번호를 자동으로 해싱하는 Hook
+accountSchema.pre('save', async function (next) { //
+    if (!this.isModified('pw')) return next(); //
+    try { //
+        const salt = await bcrypt.genSalt(10); //
+        this.pw = await bcrypt.hash(this.pw, salt); //
+        next(); //
+    } catch (err) { //
+        next(err); //
+    } //
+}); //
 
-// [GET] 웹 브라우저가 선로 구조를 요청할 때 응답하는 API[cite: 4]
-app.get('/api/track-layout', (req, res) => { //[cite: 4]
-    res.json(trackLayout); //[cite: 4]
-}); //[cite: 4]
+const Account = mongoose.model('Account', accountSchema); //
 
-// [POST] 로블록스가 이름에 "선로"가 포함된 파트들의 좌표들을 갱신하여 요청할 때 수신하는 API[cite: 4]
-app.post('/api/track-layout', (req, res) => { //[cite: 4]
-    const segments = req.body.segments; //[cite: 4]
-    if (!Array.isArray(segments) || segments.length === 0) { //[cite: 4]
-        return res.status(400).json({ error: "segments 배열이 비어있거나 올바르지 않습니다." }); //[cite: 4]
-    } //[cite: 4]
-
-    // 선로의 끝점들을 분석하여 맵의 경계(Bounds)를 동적으로 계산합니다.[cite: 4]
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity; //[cite: 4]
-    for (const seg of segments) { //[cite: 4]
-        const points = [[seg.x1, seg.z1], [seg.x2, seg.z2]]; //[cite: 4]
-        for (const [x, z] of points) { //[cite: 4]
-            if (typeof x !== 'number' || typeof z !== 'number') continue; //[cite: 4]
-            if (x < minX) minX = x; //[cite: 4]
-            if (x > maxX) maxX = x; //[cite: 4]
-            if (z < minZ) minZ = z; //[cite: 4]
-            if (z > maxZ) maxZ = z; //[cite: 4]
-        } //[cite: 4]
-    } //[cite: 4]
-
-    if (minX === Infinity) { //[cite: 4]
-        return res.status(400).json({ error: "유효한 좌표가 없습니다." }); //[cite: 4]
-    } //[cite: 4]
-
-    // 양 사이드 여백 공간(Padding)을 자동 할당해 가독성을 향상합니다.[cite: 4]
-    const padX = Math.max((maxX - minX) * 0.05, 50); //[cite: 4]
-    const padZ = Math.max((maxZ - minZ) * 0.05, 50); //[cite: 4]
-
-    trackLayout = { //[cite: 4]
-        segments, //[cite: 4]
-        bounds: { minX: minX - padX, maxX: maxX + padX, minZ: minZ - padZ, maxZ: maxZ + padZ }, //[cite: 4]
-        updatedAt: Date.now() //[cite: 4]
-    }; //[cite: 4]
-
-    fs.writeFileSync(TRACK_PATH, JSON.stringify(trackLayout, null, 2)); //[cite: 4]
-    addLog(`[선로 데이터] 선로 레이아웃이 갱신되었습니다. (구간 ${segments.length}개)`); //[cite: 4]
-    res.json({ success: true, count: segments.length, bounds: trackLayout.bounds }); //[cite: 4]
-}); //[cite: 4]
+// 최고 관리자 계정 자동 생성 함수
+async function initAdminAccount() { //
+    try { //
+        const adminExists = await Account.findOne({ id: "lsrhjru" }); //
+        if (!adminExists) { //
+            // 여기에 평문 비밀번호를 넣어도 DB 저장 시 pre-save hook에 의해 암호화되어 안전하게 기록됩니다.
+            await Account.create({ //
+                id: "lsrhjru", //
+                pw: "lsr37733*", //
+                rbxId: 4548323500, //
+                role: "최고 관리자" //
+            }); //
+            addLog("[시스템] 기본 최고 관리자 계정이 DB에 암호화되어 생성되었습니다. 🔐"); //
+        } //
+    } catch (e) { //
+        console.error("최고 관리자 초기화 에러:", e); //
+    } //
+} //
 
 // ============================
-// 🚦 자동 ATC 속도제한 및 거리 계산[cite: 4]
+// 🚂 실시간 열차 데이터 및 로그 변수
 // ============================
-const SPACING_CONFIG = { //[cite: 4]
-    MIN_LIMIT: 50, //[cite: 4]
-    MAX_LIMIT: 80, //[cite: 4]
-    NEAR_DISTANCE: 100, //[cite: 4]
-    FAR_DISTANCE: 500 //[cite: 4]
-}; //[cite: 4]
+let trains = {}; //
+let logs = []; //
+const robloxCache = {}; //
 
-function getDistance(a, b) { //[cite: 4]
-    if (a.PositionX === undefined || a.PositionZ === undefined) return Infinity; //[cite: 4]
-    if (b.PositionX === undefined || b.PositionZ === undefined) return Infinity; //[cite: 4]
-    const dx = a.PositionX - b.PositionX; //[cite: 4]
-    const dz = a.PositionZ - b.PositionZ; //[cite: 4]
-    return Math.sqrt(dx * dx + dz * dz); //[cite: 4]
-} //[cite: 4]
+function addLog(message) { //
+    const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false }); //
+    logs.unshift({ time: timestamp, text: message }); //
+    if (logs.length > 30) { //
+        logs.pop(); //
+    } //
+} //
 
-function distanceToSpeedLimit(distance) { //[cite: 4]
-    const { MIN_LIMIT, MAX_LIMIT, NEAR_DISTANCE, FAR_DISTANCE } = SPACING_CONFIG; //[cite: 4]
-    if (distance <= NEAR_DISTANCE) return MIN_LIMIT; //[cite: 4]
-    if (distance >= FAR_DISTANCE) return MAX_LIMIT; //[cite: 4]
-    const ratio = (distance - NEAR_DISTANCE) / (FAR_DISTANCE - NEAR_DISTANCE); //[cite: 4]
-    const raw = MIN_LIMIT + ratio * (MAX_LIMIT - MIN_LIMIT); //[cite: 4]
-    return Math.round(raw * 10) / 10; //[cite: 4]
-} //[cite: 4]
-
-function applySpacingSpeedLimits() { //[cite: 4]
-    const ids = Object.keys(trains); //[cite: 4]
-    for (const id of ids) { //[cite: 4]
-        const train = trains[id]; //[cite: 4]
-        if (train.ManualOverride) continue; //[cite: 4]
-
-        let nearestDistance = Infinity; //[cite: 4]
-        for (const otherId of ids) { //[cite: 4]
-            if (otherId === id) continue; //[cite: 4]
-            const dist = getDistance(train, trains[otherId]); //[cite: 4]
-            if (dist < nearestDistance) nearestDistance = dist; //[cite: 4]
-        } //[cite: 4]
-
-        if (nearestDistance !== Infinity) { //[cite: 4]
-            train.SpeedLimit = distanceToSpeedLimit(nearestDistance); //[cite: 4]
-            train.NearestTrainDistance = Math.round(nearestDistance * 10) / 10; //[cite: 4]
-        } //[cite: 4]
-    } //[cite: 4]
-} //[cite: 4]
-
-async function fetchWithTimeout(url, options = {}, timeout = 1500) { //[cite: 4]
-    const controller = new AbortController(); //[cite: 4]
-    const id = setTimeout(() => controller.abort(), timeout); //[cite: 4]
-    try { //[cite: 4]
-        const response = await fetch(url, { ...options, signal: controller.signal }); //[cite: 4]
-        clearTimeout(id); //[cite: 4]
-        return response; //[cite: 4]
-    } catch (error) { //[cite: 4]
-        clearTimeout(id); //[cite: 4]
-        throw error; //[cite: 4]
-    } //[cite: 4]
-} //[cite: 4]
-
-app.get('/', (req, res) => { //[cite: 4]
-    res.sendFile(path.join(__dirname, 'index.html')); //[cite: 4]
-}); //[cite: 4]
+addLog("통합 관제탑 시스템이 성공적으로 준비되었습니다. 🛰️"); //
 
 // ============================
-// 🌐 [API 리팩토링] 계정 관리 API (DB 기반으로 전환)[cite: 4]
+// 🗺️ 선로 레이아웃 저장소 (segments와 bounds 처리 포함)
 // ============================
+const TRACK_PATH = path.join(__dirname, 'track.json'); //
+// 💡 역(stations) 데이터를 저장할 수 있도록 기본 구조에 추가했습니다.
+let trackLayout = { segments: [], stations: [], bounds: null, updatedAt: null }; 
+try { //
+    if (fs.existsSync(TRACK_PATH)) { //
+        trackLayout = JSON.parse(fs.readFileSync(TRACK_PATH, 'utf-8')); //
+        // 기존 파일에 stations가 없을 경우를 대비한 초기화
+        if (!trackLayout.stations) trackLayout.stations = [];
+    } //
+} catch (e) { //
+    trackLayout = { segments: [], stations: [], bounds: null, updatedAt: null }; 
+} //
 
-// [API] 전체 계정 목록 조회[cite: 4]
-app.get('/api/accounts', async (req, res) => { //[cite: 4]
-    try { //[cite: 4]
-        const allAccounts = await Account.find({}); //[cite: 4]
-        res.json(allAccounts); //[cite: 4]
-    } catch (err) { //[cite: 4]
-        res.status(500).json({ error: "계정을 불러오는 중 오류가 발생했습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+// [GET] 웹 브라우저가 선로 구조를 요청할 때 응답하는 API
+app.get('/api/track-layout', (req, res) => { //
+    res.json(trackLayout); //
+}); //
 
-// [API] 신규 관제원 계정 생성[cite: 4]
-app.post('/api/accounts', async (req, res) => { //[cite: 4]
-    const { id, pw, rbxId, role, adminId } = req.body; //[cite: 4]
-    try { //[cite: 4]
-        const existingAccount = await Account.findOne({ id }); //[cite: 4]
-        if (existingAccount) { //[cite: 4]
-            return res.status(400).json({ error: "이미 존재하는 ID입니다." }); //[cite: 4]
-        } //[cite: 4]
+// [POST] 로블록스가 이름에 "선로"가 포함된 파트들의 좌표들을 갱신하여 요청할 때 수신하는 API
+app.post('/api/track-layout', (req, res) => { //
+    const segments = req.body.segments; //
+    const stations = req.body.stations || []; // 💡 요청에서 역 데이터를 추출합니다.
 
-        // 스키마 pre-save hook 덕분에 단방향 해싱 암호화 후 생성됨[cite: 4]
-        await Account.create({ //[cite: 4]
-            id, //[cite: 4]
-            pw, //[cite: 4]
-            rbxId: parseInt(rbxId) || 1, //[cite: 4]
-            role: role || "일반 관제원" //[cite: 4]
-        }); //[cite: 4]
+    if (!Array.isArray(segments) || segments.length === 0) { //
+        return res.status(400).json({ error: "segments 배열이 비어있거나 올바르지 않습니다." }); //
+    } //
 
-        addLog(`[계정 생성] 관제원 ${adminId || '시스템'}이(가) 신규 계정 [${id}]을(를) 생성했습니다.`); //[cite: 4]
-        res.json({ success: true }); //[cite: 4]
-    } catch (err) { //[cite: 4]
-        res.status(500).json({ error: "계정 생성 중 오류가 발생했습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+    // 선로의 끝점들을 분석하여 맵의 경계(Bounds)를 동적으로 계산합니다.
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity; //
+    for (const seg of segments) { //
+        const points = [[seg.x1, seg.z1], [seg.x2, seg.z2]]; //
+        for (const [x, z] of points) { //
+            if (typeof x !== 'number' || typeof z !== 'number') continue; //
+            if (x < minX) minX = x; //
+            if (x > maxX) maxX = x; //
+            if (z < minZ) minZ = z; //
+            if (z > maxZ) maxZ = z; //
+        } //
+    } //
 
-// [API] 계정 정보 변경[cite: 4]
-app.put('/api/accounts/:id', async (req, res) => { //[cite: 4]
-    const { id } = req.params; //[cite: 4]
-    const { pw, rbxId, role, adminId } = req.body; //[cite: 4]
+    if (minX === Infinity) { //
+        return res.status(400).json({ error: "유효한 좌표가 없습니다." }); //
+    } //
 
-    try { //[cite: 4]
-        const updateData = {}; //[cite: 4]
-        if (pw) updateData.pw = pw; //[cite: 4]
-        if (rbxId !== undefined) updateData.rbxId = parseInt(rbxId) || 1; //[cite: 4]
-        if (role) updateData.role = role; //[cite: 4]
+    // 양 사이드 여백 공간(Padding)을 자동 할당해 가독성을 향상합니다.
+    const padX = Math.max((maxX - minX) * 0.05, 50); //
+    const padZ = Math.max((maxZ - minZ) * 0.05, 50); //
 
-        // findOneAndUpdate의 경우 pre-save가 작동하지 않으므로, 비밀번호를 수정할 때는 직접 암호화하여 처리합니다.[cite: 4]
-        if (pw) { //[cite: 4]
-            const salt = await bcrypt.genSalt(10); //[cite: 4]
-            updateData.pw = await bcrypt.hash(pw, salt); //[cite: 4]
-        } //[cite: 4]
+    trackLayout = { //
+        segments, //
+        stations, // 💡 계산이 끝난 후 역 데이터를 포함하여 저장합니다.
+        bounds: { minX: minX - padX, maxX: maxX + padX, minZ: minZ - padZ, maxZ: maxZ + padZ }, //
+        updatedAt: Date.now() //
+    }; //
 
-        const updatedAccount = await Account.findOneAndUpdate({ id }, updateData, { new: true }); //[cite: 4]
-        if (!updatedAccount) { //[cite: 4]
-            return res.status(404).json({ error: "존재하지 않는 계정입니다." }); //[cite: 4]
-        } //[cite: 4]
-
-        addLog(`[계정 수정] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 정보를 변경했습니다.`); //[cite: 4]
-        res.json({ success: true }); //[cite: 4]
-    } catch (err) { //[cite: 4]
-        res.status(500).json({ error: "계정 수정 중 오류가 발생했습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
-
-// [API] 계정 삭제[cite: 4]
-app.delete('/api/accounts/:id', async (req, res) => { //[cite: 4]
-    const { id } = req.params; //[cite: 4]
-    const { adminId } = req.body; //[cite: 4]
-
-    if (id === "lsrhjru") { //[cite: 4]
-        return res.status(400).json({ error: "최고 관리자 계정은 삭제할 수 없습니다." }); //[cite: 4]
-    } //[cite: 4]
-
-    try { //[cite: 4]
-        const deletedAccount = await Account.findOneAndDelete({ id }); //[cite: 4]
-        if (!deletedAccount) { //[cite: 4]
-            return res.status(404).json({ error: "존재하지 않는 계정입니다." }); //[cite: 4]
-        } //[cite: 4]
-
-        addLog(`[계정 삭제] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 삭제에 성공했습니다.`); //[cite: 4]
-        res.json({ success: true }); //[cite: 4]
-    } catch (err) { //[cite: 4]
-        res.status(500).json({ error: "계정 삭제 중 오류가 발생했습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+    fs.writeFileSync(TRACK_PATH, JSON.stringify(trackLayout, null, 2)); //
+    addLog(`[지도 갱신] 선로 및 역 데이터가 갱신되었습니다. (선로 ${segments.length}개, 역 ${stations.length}개)`); 
+    res.json({ success: true, count: segments.length, stationCount: stations.length, bounds: trackLayout.bounds }); 
+}); //
 
 // ============================
-// 🤖 외부 API 및 열차 제어 라우터[cite: 4]
+// 🚦 자동 ATC 속도제한 및 거리 계산
 // ============================
-app.get('/api/roblox/user/:rbxId', async (req, res) => { //[cite: 4]
-    const { rbxId } = req.params; //[cite: 4]
-    if (robloxCache[rbxId]) return res.json(robloxCache[rbxId]); //[cite: 4]
+const SPACING_CONFIG = { //
+    MIN_LIMIT: 50, //
+    MAX_LIMIT: 80, //
+    NEAR_DISTANCE: 100, //
+    FAR_DISTANCE: 500 //
+}; //
 
-    try { //[cite: 4]
-        const userRes = await fetchWithTimeout(`https://users.roblox.com/v1/users/${rbxId}`, {}, 1500); //[cite: 4]
-        const userData = await userRes.json(); //[cite: 4]
-        const thumbRes = await fetchWithTimeout(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=true`, {}, 1500); //[cite: 4]
-        const thumbData = await thumbRes.json(); //[cite: 4]
+function getDistance(a, b) { //
+    if (a.PositionX === undefined || a.PositionZ === undefined) return Infinity; //
+    if (b.PositionX === undefined || b.PositionZ === undefined) return Infinity; //
+    const dx = a.PositionX - b.PositionX; //
+    const dz = a.PositionZ - b.PositionZ; //
+    return Math.sqrt(dx * dx + dz * dz); //
+} //
 
-        const displayName = userData.displayName || userData.name || `User ${rbxId}`; //[cite: 4]
-        const nameTag = userData.name ? ` (@${userData.name})` : ''; //[cite: 4]
-        const username = `${displayName}${nameTag}`; //[cite: 4]
-        const avatarUrl = (thumbData.data && thumbData.data[0]) ? thumbData.data[0].imageUrl : "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg"; //[cite: 4]
+function distanceToSpeedLimit(distance) { //
+    const { MIN_LIMIT, MAX_LIMIT, NEAR_DISTANCE, FAR_DISTANCE } = SPACING_CONFIG; //
+    if (distance <= NEAR_DISTANCE) return MIN_LIMIT; //
+    if (distance >= FAR_DISTANCE) return MAX_LIMIT; //
+    const ratio = (distance - NEAR_DISTANCE) / (FAR_DISTANCE - NEAR_DISTANCE); //
+    const raw = MIN_LIMIT + ratio * (MAX_LIMIT - MIN_LIMIT); //
+    return Math.round(raw * 10) / 10; //
+} //
 
-        const profileData = { username, avatarUrl }; //[cite: 4]
-        robloxCache[rbxId] = profileData; //[cite: 4]
-        res.json(profileData); //[cite: 4]
-    } catch (error) { //[cite: 4]
-        res.json({ username: `User ${rbxId}`, avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+function applySpacingSpeedLimits() { //
+    const ids = Object.keys(trains); //
+    for (const id of ids) { //
+        const train = trains[id]; //
+        if (train.ManualOverride) continue; //
 
-app.post('/api/train-status', (req, res) => { //[cite: 4]
-    const TrainId = req.body.TrainId || req.body.trainId; //[cite: 4]
-    const SpeedLimit = req.body.SpeedLimit !== undefined ? req.body.SpeedLimit : req.body.speedLimit; //[cite: 4]
-    const Action = req.body.Action || req.body.action; //[cite: 4]
+        let nearestDistance = Infinity; //
+        for (const otherId of ids) { //
+            if (otherId === id) continue; //
+            const dist = getDistance(train, trains[otherId]); //
+            if (dist < nearestDistance) nearestDistance = dist; //
+        } //
 
-    if (!TrainId) return res.status(400).json({ error: "TrainId가 누락되었습니다." }); //[cite: 4]
+        if (nearestDistance !== Infinity) { //
+            train.SpeedLimit = distanceToSpeedLimit(nearestDistance); //
+            train.NearestTrainDistance = Math.round(nearestDistance * 10) / 10; //
+        } //
+    } //
+} //
 
-    if (Action === "DELETE" || Action === "delete") { //[cite: 4]
-        if (trains[TrainId]) { //[cite: 4]
-            const driver = trains[TrainId].DriverName || "알 수 없음"; //[cite: 4]
-            addLog(`[운행 종료] [${TrainId}] 열차가 반납되었습니다. (운전자: ${driver})`); //[cite: 4]
-        } //[cite: 4]
-        delete trains[TrainId]; //[cite: 4]
-        return res.json({ success: true, message: "열차가 정상 제거되었습니다." }); //[cite: 4]
-    } //[cite: 4]
+async function fetchWithTimeout(url, options = {}, timeout = 1500) { //
+    const controller = new AbortController(); //
+    const id = setTimeout(() => controller.abort(), timeout); //
+    try { //
+        const response = await fetch(url, { ...options, signal: controller.signal }); //
+        clearTimeout(id); //
+        return response; //
+    } catch (error) { //
+        clearTimeout(id); //
+        throw error; //
+    } //
+} //
 
-    const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false; //[cite: 4]
-    const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30); //[cite: 4]
-    const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined) ? trains[TrainId].VigilanceEnabled : true; //[cite: 4]
+app.get('/', (req, res) => { //
+    res.sendFile(path.join(__dirname, 'index.html')); //
+}); //
 
-    const isNew = !trains[TrainId]; //[cite: 4]
-    const oldDriver = trains[TrainId] ? trains[TrainId].DriverName : null; //[cite: 4]
-    const newDriver = req.body.DriverName; //[cite: 4]
+// ============================
+// 🌐 [API 리팩토링] 계정 관리 API (DB 기반으로 전환)
+// ============================
 
-    trains[TrainId] = { //[cite: 4]
-        ...req.body, //[cite: 4]
-        TrainId: TrainId, //[cite: 4]
-        SpeedLimit: targetSpeedLimit, //[cite: 4]
-        remoteEmergencyActive: previousEmergency, //[cite: 4]
-        VigilanceEnabled: currentVigilanceState, //[cite: 4]
-        lastSeen: Date.now() //[cite: 4]
-    }; //[cite: 4]
+// [API] 전체 계정 목록 조회
+app.get('/api/accounts', async (req, res) => { //
+    try { //
+        const allAccounts = await Account.find({}); //
+        res.json(allAccounts); //
+    } catch (err) { //
+        res.status(500).json({ error: "계정을 불러오는 중 오류가 발생했습니다." }); //
+    } //
+}); //
 
-    if (isNew) { //[cite: 4]
-        addLog(`[신규 연결] [${TrainId}] 열차가 관제망에 연결되었습니다. (운전자: ${newDriver || '대기 중'})`); //[cite: 4]
-    } else if (newDriver && oldDriver !== newDriver) { //[cite: 4]
-        addLog(`[운전자 교대] [${TrainId}] 운전자가 변경되었습니다. (${oldDriver || '없음'} -> ${newDriver})`); //[cite: 4]
-    } //[cite: 4]
+// [API] 신규 관제원 계정 생성
+app.post('/api/accounts', async (req, res) => { //
+    const { id, pw, rbxId, role, adminId } = req.body; //
+    try { //
+        const existingAccount = await Account.findOne({ id }); //
+        if (existingAccount) { //
+            return res.status(400).json({ error: "이미 존재하는 ID입니다." }); //
+        } //
 
-    applySpacingSpeedLimits(); //[cite: 4]
+        // 스키마 pre-save hook 덕분에 단방향 해싱 암호화 후 생성됨
+        await Account.create({ //
+            id, //
+            pw, //
+            rbxId: parseInt(rbxId) || 1, //
+            role: role || "일반 관제원" //
+        }); //
 
-    res.json({ //[cite: 4]
-        RemoteEmergency: trains[TrainId].remoteEmergencyActive, //[cite: 4]
-        SpeedLimit: trains[TrainId].SpeedLimit, //[cite: 4]
-        VigilanceEnabled: trains[TrainId].VigilanceEnabled //[cite: 4]
-    }); //[cite: 4]
-}); //[cite: 4]
+        addLog(`[계정 생성] 관제원 ${adminId || '시스템'}이(가) 신규 계정 [${id}]을(를) 생성했습니다.`); //
+        res.json({ success: true }); //
+    } catch (err) { //
+        res.status(500).json({ error: "계정 생성 중 오류가 발생했습니다." }); //
+    } //
+}); //
 
-app.get('/api/current-data', (req, res) => { //[cite: 4]
-    const now = Date.now(); //[cite: 4]
-    for (const id in trains) { //[cite: 4]
-        if (now - trains[id].lastSeen > 30000) { //[cite: 4]
-            addLog(`[연결 유실] [${id}] 열차가 신호 감쇠로 인해 연결 유실되었습니다.`); //[cite: 4]
-            delete trains[id]; //[cite: 4]
-        } //[cite: 4]
-    } //[cite: 4]
-    res.json({ trains: trains, logs: logs }); //[cite: 4]
-}); //[cite: 4]
+// [API] 계정 정보 변경
+app.put('/api/accounts/:id', async (req, res) => { //
+    const { id } = req.params; //
+    const { pw, rbxId, role, adminId } = req.body; //
 
-app.post('/api/web-speedlimit', (req, res) => { //[cite: 4]
-    const trainId = req.body.trainId || req.body.TrainId; //[cite: 4]
-    const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit; //[cite: 4]
-    const adminId = req.body.adminId || "시스템"; //[cite: 4]
-    const auto = req.body.auto === true; //[cite: 4]
+    try { //
+        const updateData = {}; //
+        if (pw) updateData.pw = pw; //
+        if (rbxId !== undefined) updateData.rbxId = parseInt(rbxId) || 1; //
+        if (role) updateData.role = role; //
 
-    if (!trains[trainId]) return res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //[cite: 4]
+        // findOneAndUpdate의 경우 pre-save가 작동하지 않으므로, 비밀번호를 수정할 때는 직접 암호화하여 처리합니다.
+        if (pw) { //
+            const salt = await bcrypt.genSalt(10); //
+            updateData.pw = await bcrypt.hash(pw, salt); //
+        } //
 
-    if (auto) { //[cite: 4]
-        trains[trainId].ManualOverride = false; //[cite: 4]
-        addLog(`[속도 제한] [${trainId}] 자동 간격 조절 모드로 전환했습니다. (관제원: ${adminId})`); //[cite: 4]
-    } else { //[cite: 4]
-        trains[trainId].SpeedLimit = parseInt(speedLimit) || 30; //[cite: 4]
-        trains[trainId].ManualOverride = true; //[cite: 4]
-        addLog(`[속도 제한] [${trainId}] 속도제한을 ${speedLimit}km/h로 수동 설정했습니다. (관제원: ${adminId})`); //[cite: 4]
-    } //[cite: 4]
-    res.json({ success: true }); //[cite: 4]
-}); //[cite: 4]
+        const updatedAccount = await Account.findOneAndUpdate({ id }, updateData, { new: true }); //
+        if (!updatedAccount) { //
+            return res.status(404).json({ error: "존재하지 않는 계정입니다." }); //
+        } //
 
-app.post('/api/web-emergency', (req, res) => { //[cite: 4]
-    const trainId = req.body.trainId || req.body.TrainId; //[cite: 4]
-    const adminId = req.body.adminId || "시스템"; //[cite: 4]
+        addLog(`[계정 수정] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 정보를 변경했습니다.`); //
+        res.json({ success: true }); //
+    } catch (err) { //
+        res.status(500).json({ error: "계정 수정 중 오류가 발생했습니다." }); //
+    } //
+}); //
 
-    if (trains[trainId]) { //[cite: 4]
-        trains[trainId].remoteEmergencyActive = true; //[cite: 4]
-        addLog(`[비상 제동] [${trainId}] 원격 비상 제동을 체결했습니다. 🚨 (관제원: ${adminId})`); //[cite: 4]
-        res.json({ success: true }); //[cite: 4]
-    } else { //[cite: 4]
-        res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+// [API] 계정 삭제
+app.delete('/api/accounts/:id', async (req, res) => { //
+    const { id } = req.params; //
+    const { adminId } = req.body; //
 
-app.post('/api/web-reset', (req, res) => { //[cite: 4]
-    const trainId = req.body.trainId || req.body.TrainId; //[cite: 4]
-    const adminId = req.body.adminId || "시스템"; //[cite: 4]
+    if (id === "lsrhjru") { //
+        return res.status(400).json({ error: "최고 관리자 계정은 삭제할 수 없습니다." }); //
+    } //
 
-    if (trains[trainId]) { //[cite: 4]
-        trains[trainId].remoteEmergencyActive = false; //[cite: 4]
-        addLog(`[제동 해제] [${trainId}] 원격 비상 제동을 해제했습니다. 🟢 (관제원: ${adminId})`); //[cite: 4]
-        res.json({ success: true }); //[cite: 4]
-    } else { //[cite: 4]
-        res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+    try { //
+        const deletedAccount = await Account.findOneAndDelete({ id }); //
+        if (!deletedAccount) { //
+            return res.status(404).json({ error: "존재하지 않는 계정입니다." }); //
+        } //
 
-app.post('/api/web-vigilance', (req, res) => { //[cite: 4]
-    const trainId = req.body.trainId || req.body.TrainId; //[cite: 4]
-    const vigilanceEnabled = req.body.vigilanceEnabled !== undefined ? req.body.vigilanceEnabled : req.body.VigilanceEnabled; //[cite: 4]
-    const adminId = req.body.adminId || "시스템"; //[cite: 4]
+        addLog(`[계정 삭제] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 삭제에 성공했습니다.`); //
+        res.json({ success: true }); //
+    } catch (err) { //
+        res.status(500).json({ error: "계정 삭제 중 오류가 발생했습니다." }); //
+    } //
+}); //
 
-    if (trains[trainId]) { //[cite: 4]
-        const isEnabled = (vigilanceEnabled === true || vigilanceEnabled === 'true' || vigilanceEnabled === 1); //[cite: 4]
-        trains[trainId].VigilanceEnabled = isEnabled; //[cite: 4]
-        addLog(`[경계장치] [${trainId}] 경계장치를 ${isEnabled ? '활성화' : '비활성화'} 처리했습니다. (관제원: ${adminId})`); //[cite: 4]
-        res.json({ success: true }); //[cite: 4]
-    } else { //[cite: 4]
-        res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //[cite: 4]
-    } //[cite: 4]
-}); //[cite: 4]
+// ============================
+// 🤖 외부 API 및 열차 제어 라우터
+// ============================
+app.get('/api/roblox/user/:rbxId', async (req, res) => { //
+    const { rbxId } = req.params; //
+    if (robloxCache[rbxId]) return res.json(robloxCache[rbxId]); //
 
-// 🚀 dynamic port 바인딩 및 외부 접근 허용용 호스트 주소 '0.0.0.0' 설정 추가 완료[cite: 4]
-app.listen(PORT, '0.0.0.0', () => { //[cite: 4]
-    console.log(`[통합 관제탑 서버 실행 완료] 포트: ${PORT}`); //[cite: 4]
-}); //[cite: 4]
+    try { //
+        const userRes = await fetchWithTimeout(`https://users.roblox.com/v1/users/${rbxId}`, {}, 1500); //
+        const userData = await userRes.json(); //
+        const thumbRes = await fetchWithTimeout(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${rbxId}&size=150x150&format=Png&isCircular=true`, {}, 1500); //
+        const thumbData = await thumbRes.json(); //
+
+        const displayName = userData.displayName || userData.name || `User ${rbxId}`; //
+        const nameTag = userData.name ? ` (@${userData.name})` : ''; //
+        const username = `${displayName}${nameTag}`; //
+        const avatarUrl = (thumbData.data && thumbData.data[0]) ? thumbData.data[0].imageUrl : "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg"; //
+
+        const profileData = { username, avatarUrl }; //
+        robloxCache[rbxId] = profileData; //
+        res.json(profileData); //
+    } catch (error) { //
+        res.json({ username: `User ${rbxId}`, avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg" }); //
+    } //
+}); //
+
+app.post('/api/train-status', (req, res) => { //
+    const TrainId = req.body.TrainId || req.body.trainId; //
+    const SpeedLimit = req.body.SpeedLimit !== undefined ? req.body.SpeedLimit : req.body.speedLimit; //
+    const Action = req.body.Action || req.body.action; //
+
+    if (!TrainId) return res.status(400).json({ error: "TrainId가 누락되었습니다." }); //
+
+    if (Action === "DELETE" || Action === "delete") { //
+        if (trains[TrainId]) { //
+            const driver = trains[TrainId].DriverName || "알 수 없음"; //
+            addLog(`[운행 종료] [${TrainId}] 열차가 반납되었습니다. (운전자: ${driver})`); //
+        } //
+        delete trains[TrainId]; //
+        return res.json({ success: true, message: "열차가 정상 제거되었습니다." }); //
+    } //
+
+    const previousEmergency = trains[TrainId] ? trains[TrainId].remoteEmergencyActive : false; //
+    const targetSpeedLimit = trains[TrainId] ? trains[TrainId].SpeedLimit : (SpeedLimit || 30); //
+    const currentVigilanceState = (trains[TrainId] && trains[TrainId].VigilanceEnabled !== undefined) ? trains[TrainId].VigilanceEnabled : true; //
+
+    const isNew = !trains[TrainId]; //
+    const oldDriver = trains[TrainId] ? trains[TrainId].DriverName : null; //
+    const newDriver = req.body.DriverName; //
+
+    trains[TrainId] = { //
+        ...req.body, //
+        TrainId: TrainId, //
+        SpeedLimit: targetSpeedLimit, //
+        remoteEmergencyActive: previousEmergency, //
+        VigilanceEnabled: currentVigilanceState, //
+        lastSeen: Date.now() //
+    }; //
+
+    if (isNew) { //
+        addLog(`[신규 연결] [${TrainId}] 열차가 관제망에 연결되었습니다. (운전자: ${newDriver || '대기 중'})`); //
+    } else if (newDriver && oldDriver !== newDriver) { //
+        addLog(`[운전자 교대] [${TrainId}] 운전자가 변경되었습니다. (${oldDriver || '없음'} -> ${newDriver})`); //
+    } //
+
+    applySpacingSpeedLimits(); //
+
+    res.json({ //
+        RemoteEmergency: trains[TrainId].remoteEmergencyActive, //
+        SpeedLimit: trains[TrainId].SpeedLimit, //
+        VigilanceEnabled: trains[TrainId].VigilanceEnabled //
+    }); //
+}); //
+
+app.get('/api/current-data', (req, res) => { //
+    const now = Date.now(); //
+    for (const id in trains) { //
+        if (now - trains[id].lastSeen > 30000) { //
+            addLog(`[연결 유실] [${id}] 열차가 신호 감쇠로 인해 연결 유실되었습니다.`); //
+            delete trains[id]; //
+        } //
+    } //
+    res.json({ trains: trains, logs: logs }); //
+}); //
+
+app.post('/api/web-speedlimit', (req, res) => { //
+    const trainId = req.body.trainId || req.body.TrainId; //
+    const speedLimit = req.body.speedLimit !== undefined ? req.body.speedLimit : req.body.SpeedLimit; //
+    const adminId = req.body.adminId || "시스템"; //
+    const auto = req.body.auto === true; //
+
+    if (!trains[trainId]) return res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //
+
+    if (auto) { //
+        trains[trainId].ManualOverride = false; //
+        addLog(`[속도 제한] [${trainId}] 자동 간격 조절 모드로 전환했습니다. (관제원: ${adminId})`); //
+    } else { //
+        trains[trainId].SpeedLimit = parseInt(speedLimit) || 30; //
+        trains[trainId].ManualOverride = true; //
+        addLog(`[속도 제한] [${trainId}] 속도제한을 ${speedLimit}km/h로 수동 설정했습니다. (관제원: ${adminId})`); //
+    } //
+    res.json({ success: true }); //
+}); //
+
+app.post('/api/web-emergency', (req, res) => { //
+    const trainId = req.body.trainId || req.body.TrainId; //
+    const adminId = req.body.adminId || "시스템"; //
+
+    if (trains[trainId]) { //
+        trains[trainId].remoteEmergencyActive = true; //
+        addLog(`[비상 제동] [${trainId}] 원격 비상 제동을 체결했습니다. 🚨 (관제원: ${adminId})`); //
+        res.json({ success: true }); //
+    } else { //
+        res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //
+    } //
+}); //
+
+app.post('/api/web-reset', (req, res) => { //
+    const trainId = req.body.trainId || req.body.TrainId; //
+    const adminId = req.body.adminId || "시스템"; //
+
+    if (trains[trainId]) { //
+        trains[trainId].remoteEmergencyActive = false; //
+        addLog(`[제동 해제] [${trainId}] 원격 비상 제동을 해제했습니다. 🟢 (관제원: ${adminId})`); //
+        res.json({ success: true }); //
+    } else { //
+        res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //
+    } //
+}); //
+
+app.post('/api/web-vigilance', (req, res) => { //
+    const trainId = req.body.trainId || req.body.TrainId; //
+    const vigilanceEnabled = req.body.vigilanceEnabled !== undefined ? req.body.vigilanceEnabled : req.body.VigilanceEnabled; //
+    const adminId = req.body.adminId || "시스템"; //
+
+    if (trains[trainId]) { //
+        const isEnabled = (vigilanceEnabled === true || vigilanceEnabled === 'true' || vigilanceEnabled === 1); //
+        trains[trainId].VigilanceEnabled = isEnabled; //
+        addLog(`[경계장치] [${trainId}] 경계장치를 ${isEnabled ? '활성화' : '비활성화'} 처리했습니다. (관제원: ${adminId})`); //
+        res.json({ success: true }); //
+    } else { //
+        res.status(404).json({ error: "열차를 찾을 수 없습니다." }); //
+    } //
+}); //
+
+// 🚀 dynamic port 바인딩 및 외부 접근 허용용 호스트 주소 '0.0.0.0' 설정 추가 완료
+app.listen(PORT, '0.0.0.0', () => { //
+    console.log(`[통합 관제탑 서버 실행 완료] 포트: ${PORT}`); //
+}); //
