@@ -1,13 +1,20 @@
 {
-  "name": "roblox-train-control",
+  "name": "train-control-tower",
   "version": "1.0.0",
-  "description": "로블록스 열차 관제 서버",
+  "description": "로블록스 열차 통합 관제탑 서버",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "express": "^4.19.2",
-    "mongoose": "^8.12.0"
-  }
+    "mongoose": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "lsrhjru",
+  "license": "ISC"
 }
