@@ -2,16 +2,20 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose'); // ➕ MongoDB 연결을 위한 Mongoose 추가
+const bcrypt = require('bcryptjs'); // 🔒 보안을 위한 bcryptjs 추가
+
 const app = express();
-const PORT = 3000;
+
+// 🌐 Render 환경에서는 지정된 포트를 우선 사용하고, 로컬 개발 환경에서는 3000번 포트를 사용합니다.
+const PORT = process.env.PORT || 3000; 
 
 app.use(express.json());
 
 // ============================
 // 💾 [데이터베이스 설정] MongoDB 연결
 // ============================
-// 로컬 DB 기준 주소입니다. 클라우드(MongoDB Atlas)를 쓰신다면 해당 URL로 변경하세요.
-const MONGO_URI = 'mongodb://localhost:27017/train_control_tower'; 
+// Render 환경변수(MONGO_URI)가 있으면 클라우드 Atlas를 사용하고, 없으면 로컬 DB에 접속합니다.
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/train_control_tower'; 
 
 mongoose.connect(MONGO_URI)
     .then(() => {
@@ -27,6 +31,19 @@ const accountSchema = new mongoose.Schema({
     rbxId: { type: Number, default: 1 },
     role: { type: String, default: '일반 관제원' }
 });
+
+// 🔒 [보안 필터] DB에 저장(create/save)되기 전 비밀번호를 자동으로 해싱하는 Hook
+accountSchema.pre('save', async function (next) {
+    if (!this.isModified('pw')) return next();
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.pw = await bcrypt.hash(this.pw, salt);
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
+
 const Account = mongoose.model('Account', accountSchema);
 
 // 최고 관리자 계정 자동 생성 함수
@@ -34,13 +51,14 @@ async function initAdminAccount() {
     try {
         const adminExists = await Account.findOne({ id: "lsrhjru" });
         if (!adminExists) {
+            // 여기에 평문 비밀번호를 넣어도 DB 저장 시 pre-save hook에 의해 암호화되어 안전하게 기록됩니다.
             await Account.create({
                 id: "lsrhjru",
-                pw: "lsr37733*", // ⚠️ 주의: 실서비스 시에는 비밀번호를 해싱(암호화)해서 저장하는 것을 추천합니다!
+                pw: "lsr37733*", 
                 rbxId: 4548323500,
                 role: "최고 관리자"
             });
-            addLog("[시스템] 기본 최고 관리자 계정이 DB에 생성되었습니다.");
+            addLog("[시스템] 기본 최고 관리자 계정이 DB에 암호화되어 생성되었습니다. 🔐");
         }
     } catch (e) {
         console.error("최고 관리자 초기화 에러:", e);
@@ -205,6 +223,7 @@ app.post('/api/accounts', async (req, res) => {
             return res.status(400).json({ error: "이미 존재하는 ID입니다." });
         }
         
+        // 스키마 pre-save hook 덕분에 단방향 해싱 암호화 후 생성됨
         await Account.create({
             id,
             pw,
@@ -229,6 +248,12 @@ app.put('/api/accounts/:id', async (req, res) => {
         if (pw) updateData.pw = pw;
         if (rbxId !== undefined) updateData.rbxId = parseInt(rbxId) || 1;
         if (role) updateData.role = role;
+
+        // findOneAndUpdate의 경우 pre-save가 작동하지 않으므로, 비밀번호를 수정할 때는 직접 암호화하여 처리합니다.
+        if (pw) {
+            const salt = await bcrypt.genSalt(10);
+            updateData.pw = await bcrypt.hash(pw, salt);
+        }
 
         const updatedAccount = await Account.findOneAndUpdate({ id }, updateData, { new: true });
         if (!updatedAccount) {
@@ -257,7 +282,7 @@ app.delete('/api/accounts/:id', async (req, res) => {
             return res.status(404).json({ error: "존재하지 않는 계정입니다." });
         }
 
-        addLog(`[계정 삭제] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정을 삭제했습니다.`);
+        addLog(`[계정 삭제] 관제원 ${adminId || '시스템'}이(가) [${id}] 계정 삭제에 성공했습니다.`);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "계정 삭제 중 오류가 발생했습니다." });
@@ -409,6 +434,7 @@ app.post('/api/web-vigilance', (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`[통합 관제탑 서버 실행 완료] http://localhost:${PORT}`);
+// 🚀 dynamic port 바인딩 및 외부 접근 허용용 호스트 주소 '0.0.0.0' 설정 추가 완료
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[통합 관제탑 서버 실행 완료] 포트: ${PORT}`);
 });
