@@ -9,7 +9,7 @@ const app = express();
 // 🌐 Render 환경에서는 지정된 포트를 우선 사용하고, 로컬 개발 환경에서는 3000번 포트를 사용합니다.[cite: 4]
 const PORT = process.env.PORT || 3000; //[cite: 4]
 
-app.use(express.json()); //[cite: 4]
+app.use(express.json({ limit: '50mb' })); //[cite: 4]
 
 // ============================
 // 💾 [데이터베이스 설정] MongoDB 연결[cite: 4]
