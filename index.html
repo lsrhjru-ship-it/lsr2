@@ -9,6 +9,8 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🔒 DB의 bcryptjs 암호화 비밀번호 검증용 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
 
     <style>
         :root {
@@ -716,8 +718,10 @@
 
     <script>
         const MASTER_ADMIN_ID = "lsrhjru";
-        const ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
         const FALLBACK_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg";
+
+        // 🌐 선로 레이아웃에 맞게 백엔드 API에서 로드될 맵의 경계(Bounds) 정보 (기본값 설정)
+        let ROBLOX_MAP_BOUNDS = { minX: -3000, maxX: 3000, minZ: -3000, maxZ: 3000 };
 
         let accountDB = [];
         let currentUserSession = null;
@@ -762,8 +766,25 @@
         }
 
         window.onload = async () => {
+            await fetchTrackLayout(); // 🗺️ 백엔드로부터 dynamic 선로 레이아웃 및 Bounds 동기화
             await fetchAccounts();
         };
+
+        // 🗺️ 백엔드 Track Bounds 가져와 맵 동적 정렬
+        async function fetchTrackLayout() {
+            try {
+                const res = await fetch(`/api/track-layout?t=${Date.now()}`, { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.bounds) {
+                        ROBLOX_MAP_BOUNDS = data.bounds;
+                        console.log("▶ [지도 동기화] 선로 레이아웃의 실시간 Bounds를 성공적으로 갱신했습니다.", ROBLOX_MAP_BOUNDS);
+                    }
+                }
+            } catch (e) {
+                console.error("선로 레이아웃을 가져오지 못해 기본 좌표 범위(-3000 ~ 3000)를 사용합니다.", e);
+            }
+        }
 
         async function fetchAccounts() {
             try {
@@ -785,6 +806,7 @@
             document.getElementById('nav-title').innerText = titles[viewId] || "통합 관제 시스템";
         }
 
+        // 🔒 [보안 업그레이드] 서버에 있는 bcrypt 암호화 해시와 브라우저 자체 대조 수행
         async function handleLogin() {
             const idInput = document.getElementById('login-id');
             const pwInput = document.getElementById('login-pw');
@@ -795,7 +817,20 @@
             if (!inputPw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
 
             await fetchAccounts();
-            const found = accountDB.find(u => u.id === inputId && u.pw === inputPw);
+            
+            // 해시값 대조 작업 실행
+            const found = accountDB.find(u => {
+                if (u.id !== inputId) return false;
+                try {
+                    // DB 비밀번호 필드가 bcrypt 해시 형식인 경우 동적 비교 수행
+                    if (u.pw.startsWith('$2')) {
+                        return dcodeIO.bcrypt.compareSync(inputPw, u.pw);
+                    }
+                } catch (err) {
+                    console.error("Bcrypt 복호화 에러:", err);
+                }
+                return u.pw === inputPw; // 백업용 일반 텍스트 비교
+            });
 
             if (found) {
                 currentUserSession = found;
@@ -851,7 +886,13 @@
                 const res = await fetch('/api/accounts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: newId, pw: newPw, rbxId: newRbx, role: newRole })
+                    body: JSON.stringify({ 
+                        id: newId, 
+                        pw: newPw, 
+                        rbxId: newRbx, 
+                        role: newRole,
+                        adminId: currentUserSession.id // 감사 로그용 adminId 전달
+                    })
                 });
 
                 const data = await res.json();
@@ -866,7 +907,8 @@
             }
         }
 
-        function startEditMode(id, pw, rbxId, role) {
+        // 🔄 계정 정보 수정 UI 갱신 (비밀번호 이중 암호화 방지 구조)
+        function startEditMode(id, rbxId, role) {
             isEditMode = true;
             editingTargetId = id;
 
@@ -877,7 +919,10 @@
             idInput.value = id;
             idInput.disabled = true;
 
-            document.getElementById('new-user-pw').value = pw;
+            // 해시값 노출을 막고 수정 의사가 있을 때만 전송할 수 있도록 비움
+            document.getElementById('new-user-pw').value = "";
+            document.getElementById('new-user-pw').placeholder = "변경할 때만 새 비밀번호 입력";
+            
             document.getElementById('new-user-rbx').value = rbxId;
             document.getElementById('new-user-role').value = role;
 
@@ -900,6 +945,7 @@
             idInput.disabled = false;
 
             document.getElementById('new-user-pw').value = "";
+            document.getElementById('new-user-pw').placeholder = "비밀번호 지정";
             document.getElementById('new-user-rbx').value = "1";
             document.getElementById('new-user-role').value = "일반 관제원";
 
@@ -915,13 +961,21 @@
             const rbxId = parseInt(document.getElementById('new-user-rbx').value) || 1;
             const role = document.getElementById('new-user-role').value;
 
-            if (!pw) { alert("비밀번호를 입력하세요."); pwInput.focus(); return; }
+            // 수정 시 변경값이 공백인 항목은 전송하지 않음 (패스워드 유지 기능)
+            const payload = {
+                rbxId: rbxId,
+                role: role,
+                adminId: currentUserSession.id
+            };
+            if (pw) {
+                payload.pw = pw;
+            }
 
             try {
                 const res = await fetch(`/api/accounts/${editingTargetId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pw, rbxId, role })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await res.json();
@@ -943,7 +997,11 @@
             if (!confirm(`정말로 계정 [${id}]을(를) 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.`)) return;
 
             try {
-                const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/accounts/${id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adminId: currentUserSession.id }) // 감사 로그용 데이터 탑재
+                });
                 const data = await res.json();
                 if (data.error) alert(data.error);
                 else {
@@ -963,9 +1021,10 @@
                 const isSuperAdmin = (u.role === '최고 관리자' || u.id === MASTER_ADMIN_ID);
                 const tr = document.createElement('tr');
 
+                // 암호값인 u.pw는 파라미터에서 제거하여 보안 유출 및 따옴표 깨짐 에러 방지
                 const actionButtons = isSuperAdmin ?
                     `<span style="color:var(--text-muted); font-size:12px;"><i class="fa-solid fa-lock"></i> 수정/삭제 보호됨</span>` :
-                    `<button class="btn btn-primary" style="display:inline-block; padding: 4px 10px; font-size:11px; margin-right:5px; font-weight:700;" onclick="startEditMode('${u.id}', '${u.pw}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen"></i> 수정</button>
+                    `<button class="btn btn-primary" style="display:inline-block; padding: 4px 10px; font-size:11px; margin-right:5px; font-weight:700;" onclick="startEditMode('${u.id}', ${u.rbxId}, '${u.role}')"><i class="fa-solid fa-pen"></i> 수정</button>
                      <button class="btn btn-danger" style="display:inline-block; padding: 4px 10px; font-size:11px; font-weight:700;" onclick="deleteAccount('${u.id}')"><i class="fa-solid fa-trash"></i> 삭제</button>`;
 
                 tr.innerHTML = `
@@ -1082,11 +1141,11 @@
 
                     let pctX = (((posX) - ROBLOX_MAP_BOUNDS.minX) / (ROBLOX_MAP_BOUNDS.maxX - ROBLOX_MAP_BOUNDS.minX)) * 100;
                     let pctZ = (((posZ) - ROBLOX_MAP_BOUNDS.minZ) / (ROBLOX_MAP_BOUNDS.maxZ - ROBLOX_MAP_BOUNDS.minZ)) * 100;
-                    
+
                     const newLeft = `${Math.max(0, Math.min(100, pctX))}%`;
                     const newTop = `${Math.max(0, Math.min(100, pctZ))}%`;
-                    if(marker.style.left !== newLeft) marker.style.left = newLeft;
-                    if(marker.style.top !== newTop) marker.style.top = newTop;
+                    if (marker.style.left !== newLeft) marker.style.left = newLeft;
+                    if (marker.style.top !== newTop) marker.style.top = newTop;
 
                     const markerLabel = `${safeTrainName.split(' ')[0]} (${speed}km/h)`;
                     updateTextSafely(marker.querySelector('.train-marker-label'), markerLabel);
@@ -1180,8 +1239,7 @@
                         }
                     }
 
-                    // 🔒 Race Condition (씹힘) 방지 로직 보완
-                    // pending 상태(전송 직후)이거나 사용자가 편집 중일 때는 서버 데이터로 덮어씌우지 않음
+                    // 🔒 Race Condition (인풋 덮어씌움) 방지 로직 보완
                     const limitInput = card.querySelector('.limit-input');
                     if (limitInput && limitInput.dataset.editing !== 'true' && limitInput.dataset.pending !== 'true' && document.activeElement !== limitInput) {
                         if (limitInput.value !== String(speedLimit)) {
@@ -1205,7 +1263,7 @@
                     const targetUserId = train.DriverId > 0 ? train.DriverId : 1;
                     if (card.dataset.driverId !== String(targetUserId)) {
                         card.dataset.driverId = String(targetUserId); // 현재 운전자 ID 고정
-                        
+
                         getRobloxProfile(targetUserId).then(profile => {
                             const avatarImg = card.querySelector('.v-avatar');
                             const nameSpan = card.querySelector('.v-driver');
@@ -1217,7 +1275,6 @@
                             }
                         });
                     } else {
-                        // ID는 같지만 로블록스 내부에서 이름만 갱신된 경우 처리
                         const nameSpan = card.querySelector('.v-driver');
                         if (nameSpan && train.DriverName) {
                             updateTextSafely(nameSpan, train.DriverName);
