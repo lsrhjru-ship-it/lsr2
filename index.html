@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>로블록스 차세대 통합 관제 시스템</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap"
@@ -29,6 +29,10 @@
         * {
             box-sizing: border-box;
             font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        html, body {
+            height: 100%;
         }
 
         body {
@@ -57,6 +61,7 @@
             align-items: center;
             justify-content: center;
             backdrop-filter: blur(12px);
+            padding: 16px;
         }
 
         .auth-card {
@@ -65,6 +70,7 @@
             padding: 40px;
             border-radius: 16px;
             width: 400px;
+            max-width: 100%;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
@@ -108,6 +114,7 @@
         /* 2. 좌측 사이드바 */
         .sidebar {
             width: 280px;
+            flex-shrink: 0;
             background: rgba(13, 17, 23, 0.95);
             border-right: 1px solid var(--panel-border);
             display: flex;
@@ -224,10 +231,12 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            min-width: 0;
         }
 
         .top-navbar {
             height: 70px;
+            flex-shrink: 0;
             background: rgba(13, 17, 23, 0.6);
             border-bottom: 1px solid var(--panel-border);
             display: flex;
@@ -235,12 +244,50 @@
             justify-content: space-between;
             padding: 0 30px;
             backdrop-filter: blur(10px);
+            gap: 12px;
         }
 
         .top-navbar h1 {
             font-size: 18px;
             margin: 0;
             font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        /* 모바일 전용 햄버거 버튼: 데스크탑에서는 숨김 */
+        #hamburger-btn {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            font-size: 18px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 400;
         }
 
         .content-body {
@@ -250,6 +297,7 @@
             display: flex;
             flex-direction: column;
             gap: 25px;
+            -webkit-overflow-scrolling: touch;
         }
 
         .view-section {
@@ -390,15 +438,18 @@
             justify-content: space-between;
             margin-bottom: 12px;
             font-size: 14px;
+            gap: 10px;
         }
 
         .info-label {
             color: var(--text-muted);
+            flex-shrink: 0;
         }
 
         .info-value {
             font-weight: 700;
             color: var(--accent);
+            text-align: right;
         }
 
         .limit-input-zone {
@@ -410,6 +461,8 @@
             border-radius: 8px;
             margin: 15px 0;
             border: 1px solid rgba(255, 255, 255, 0.03);
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .limit-input {
@@ -461,10 +514,12 @@
         .control-zone {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .control-zone .btn {
             flex: 1;
+            min-width: 90px;
             padding: 10px 4px;
             font-size: 11px;
         }
@@ -501,18 +556,27 @@
             display: flex;
             gap: 30px;
             align-items: flex-start;
+            flex-wrap: wrap;
         }
 
         .admin-form {
             width: 320px;
+            max-width: 100%;
             background: rgba(0, 0, 0, 0.2);
             padding: 20px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        .table-scroll-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .custom-table {
             width: 100%;
+            min-width: 560px;
             border-collapse: collapse;
             text-align: left;
             margin-top: 10px;
@@ -540,12 +604,14 @@
             font-size: 13px;
             line-height: 1.6;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            -webkit-overflow-scrolling: touch;
         }
 
         .log-line {
             margin-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.02);
             padding-bottom: 4px;
+            word-break: break-word;
         }
 
         .log-time {
@@ -587,6 +653,123 @@
                 transform: translate(-50%, -50%) scale(1.2);
             }
         }
+
+        /* ==========================================================
+           📱 모바일 반응형 (900px 이하): 사이드바를 오프캔버스 메뉴로 전환
+           ========================================================== */
+        @media (max-width: 900px) {
+            body {
+                overflow: hidden;
+            }
+
+            #hamburger-btn {
+                display: flex;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -300px;
+                height: 100%;
+                width: 260px;
+                max-width: 80vw;
+                transition: left 0.25s ease;
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            #sidebar-backdrop.open {
+                display: block;
+            }
+
+            .main-wrapper {
+                width: 100%;
+            }
+
+            .top-navbar {
+                padding: 0 16px;
+            }
+
+            .top-navbar h1 {
+                font-size: 15px;
+            }
+
+            .top-navbar span {
+                display: none;
+            }
+
+            .content-body {
+                padding: 14px;
+                gap: 16px;
+            }
+
+            .map-section {
+                padding: 12px;
+            }
+
+            .map-container {
+                height: 260px;
+            }
+
+            .grid-container {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .train-card {
+                padding: 16px;
+            }
+
+            .admin-flex {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .admin-form {
+                width: 100%;
+            }
+
+            .card-table-wrap {
+                padding: 14px;
+            }
+
+            .log-box {
+                height: 360px;
+                font-size: 12px;
+            }
+
+            .control-zone .btn {
+                min-width: 80px;
+                font-size: 10px;
+                padding: 10px 2px;
+            }
+
+            .limit-input-zone {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .auth-card {
+                padding: 24px 18px;
+            }
+
+            .info-row {
+                font-size: 13px;
+            }
+
+            .control-zone {
+                flex-direction: column;
+            }
+
+            .control-zone .btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -607,7 +790,9 @@
         </div>
     </div>
 
-    <div class="sidebar">
+    <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+    <div class="sidebar" id="app-sidebar">
         <div class="sidebar-brand">
             <i class="fa-solid fa-circle-nodes"></i> NEXT-TCMS
         </div>
@@ -634,8 +819,13 @@
 
     <div class="main-wrapper">
         <div class="top-navbar">
-            <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
-            <div><span style="font-size:13px; color:var(--text-muted);"><i class="fa-solid fa-clock"></i> SYSTEM
+            <div class="navbar-left">
+                <button id="hamburger-btn" onclick="toggleSidebar()" aria-label="메뉴 열기">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h1 id="nav-title">실시간 기차 통합 대시보드</h1>
+            </div>
+            <div><span style="font-size:13px; color:var(--text-muted); white-space:nowrap;"><i class="fa-solid fa-clock"></i> SYSTEM
                     LIVE</span></div>
         </div>
 
@@ -697,20 +887,22 @@
                                     onclick="cancelEditMode()">취소</button>
                             </div>
                         </div>
-                        <div style="flex: 1;">
-                            <table class="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th>아바타</th>
-                                        <th>관제원 계정 ID</th>
-                                        <th>연동 로블록스 ID</th>
-                                        <th>권한 레벨</th>
-                                        <th>상태</th>
-                                        <th>액션</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="account-table-body"></tbody>
-                            </table>
+                        <div style="flex: 1; min-width: 0; width: 100%;">
+                            <div class="table-scroll-wrap">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>아바타</th>
+                                            <th>관제원 계정 ID</th>
+                                            <th>연동 로블록스 ID</th>
+                                            <th>권한 레벨</th>
+                                            <th>상태</th>
+                                            <th>액션</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="account-table-body"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -740,6 +932,19 @@
 
         const robloxCache = {};
         const robloxPromises = {};
+
+        // 📱 모바일 오프캔버스 사이드바 토글
+        function toggleSidebar() {
+            const sidebar = document.getElementById('app-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            const isOpen = sidebar.classList.toggle('open');
+            backdrop.classList.toggle('open', isOpen);
+        }
+
+        function closeSidebar() {
+            document.getElementById('app-sidebar').classList.remove('open');
+            document.getElementById('sidebar-backdrop').classList.remove('open');
+        }
 
         function hasAdminPrivilege(user) {
             if (!user) return false;
@@ -890,6 +1095,7 @@
             element.classList.add('active');
             const titles = { dashboard: "실시간 기차 통합 대시보드", accounts: "계정 및 시스템 권한 관리", logs: "통합 보안 감사 로그 모니터" };
             document.getElementById('nav-title').innerText = titles[viewId] || "통합 관제 시스템";
+            closeSidebar(); // 📱 모바일에서 메뉴 선택 시 자동으로 닫기
         }
 
         // 🔒 [보안 업그레이드] 서버에 있는 bcrypt 암호화 해시와 브라우저 자체 대조 수행
